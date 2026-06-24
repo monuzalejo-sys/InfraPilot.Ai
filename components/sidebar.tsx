@@ -1,75 +1,74 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import {
-  LayoutDashboard,
-  Sparkles,
-  FileText,
-  BookOpen,
-  Gavel,
-  FolderOpen,
-  TrendingUp,
-  Bot,
-  ChevronRight,
-  Building2,
-  Plus,
-  Settings,
-  CreditCard,
-  LogOut,
-  CheckSquare,
+  LayoutDashboard, Sparkles, FileText, Gavel, TrendingUp,
+  Bot, ChevronRight, Building2, Plus, Settings, LogOut,
+  Database, Calculator,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
-import { mockUser, mockOrg } from "@/lib/mock-data"
+import { createClient } from "@/lib/supabase/client"
+
+interface UserInfo {
+  email?: string
+  full_name?: string
+  company?: string
+}
 
 const navSections = [
   {
     label: "Workspace",
     items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/cotizador", label: "Cotizador IA", icon: Sparkles, isAi: true },
-      { href: "/presupuestos", label: "Presupuestos", icon: FileText },
-      { href: "/biblioteca", label: "Biblioteca APUs", icon: BookOpen, disabled: true },
+      { href: "/dashboard",    label: "Dashboard",          icon: LayoutDashboard },
+      { href: "/cotizador",    label: "Cotizador IA",       icon: Sparkles,  isAi: true },
+      { href: "/presupuestos", label: "Presupuestos",       icon: FileText },
+      { href: "/precios",      label: "Base de Precios",    icon: Database },
+      { href: "/apus",         label: "APUs",               icon: Calculator },
     ],
   },
   {
     label: "Licitaciones",
     items: [
-      { href: "/licitaciones", label: "Licitaciones", icon: Gavel, isAi: true },
-      { href: "/documentos", label: "Centro Documental", icon: FolderOpen, disabled: true },
+      { href: "/licitaciones", label: "Licitaciones",       icon: Gavel,     isAi: true },
     ],
   },
   {
     label: "Análisis",
     items: [
-      { href: "/predictor", label: "Predictor Financiero", icon: TrendingUp },
-      { href: "/copiloto", label: "Copiloto IA", icon: Bot, isAi: true, disabled: true },
+      { href: "/predictor",    label: "Predictor Financiero",icon: TrendingUp },
+      { href: "/copiloto",     label: "Copiloto IA",        icon: Bot,       isAi: true, disabled: true },
     ],
   },
 ]
 
-const recentProjects = [
-  { name: "Edificio Los Álamos", type: "edificacion", status: "approved" },
-  { name: "Vía San Martín km 12", type: "vial", status: "review" },
-  { name: "PTAR Lurín", type: "hidraulica", status: "draft" },
-]
-
-const statusDot: Record<string, string> = {
-  approved: "bg-emerald-400",
-  review: "bg-amber-400",
-  draft: "bg-slate-500",
-}
-
-const planLabel: Record<string, string> = {
-  free: "Free",
-  starter: "Starter",
-  professional: "Pro",
-  enterprise: "Enterprise",
-}
-
 export function Sidebar() {
   const pathname = usePathname()
+  const router   = useRouter()
+  const [user, setUser] = useState<UserInfo | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUser({
+          email:     user.email,
+          full_name: user.user_metadata?.full_name,
+          company:   user.user_metadata?.company,
+        })
+      }
+    })
+  }, [])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/login")
+    router.refresh()
+  }
+
+  const initial = (user?.full_name ?? user?.email ?? "U").charAt(0).toUpperCase()
 
   return (
     <aside className="flex flex-col h-full w-60 shrink-0 bg-slate-900 border-r border-slate-800">
@@ -91,44 +90,36 @@ export function Sidebar() {
             <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = pathname === item.href
-                const Icon = item.icon
+                const Icon     = item.icon
+                const disabled = "disabled" in item && item.disabled
                 return (
                   <li key={item.href}>
                     <Link
-                      href={item.disabled ? "#" : item.href}
-                      onClick={item.disabled ? (e) => e.preventDefault() : undefined}
+                      href={disabled ? "#" : item.href}
+                      onClick={disabled ? (e) => e.preventDefault() : undefined}
                       className={cn(
                         "sidebar-item flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-all duration-100 group",
                         isActive
                           ? "sidebar-item-active text-white"
-                          : item.disabled
+                          : disabled
                           ? "text-slate-600 cursor-not-allowed"
                           : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                       )}
                     >
-                      <Icon
-                        className={cn(
-                          "w-4 h-4 shrink-0 transition-colors",
-                          isActive
-                            ? item.isAi
-                              ? "text-violet-400"
-                              : "text-indigo-400"
-                            : item.disabled
-                            ? "text-slate-600"
-                            : item.isAi
-                            ? "text-violet-500 group-hover:text-violet-400"
-                            : "text-slate-500 group-hover:text-slate-300"
-                        )}
-                      />
+                      <Icon className={cn(
+                        "w-4 h-4 shrink-0 transition-colors",
+                        isActive  ? (item.isAi ? "text-violet-400" : "text-indigo-400")
+                          : disabled ? "text-slate-600"
+                          : item.isAi ? "text-violet-500 group-hover:text-violet-400"
+                          : "text-slate-500 group-hover:text-slate-300"
+                      )} />
                       <span className="flex-1 truncate">{item.label}</span>
-                      {item.isAi && !item.disabled && (
+                      {item.isAi && !disabled && (
                         <span className="text-[9px] font-bold text-violet-400 bg-violet-900/40 border border-violet-800/50 px-1 py-0.5 rounded-sm">
                           IA
                         </span>
                       )}
-                      {item.disabled && (
-                        <ChevronRight className="w-3 h-3 text-slate-700 opacity-50" />
-                      )}
+                      {disabled && <ChevronRight className="w-3 h-3 text-slate-700 opacity-50" />}
                     </Link>
                   </li>
                 )
@@ -137,53 +128,43 @@ export function Sidebar() {
           </div>
         ))}
 
-        {/* Recent Projects */}
+        {/* New project shortcut */}
         <div className="mb-4">
           <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            Proyectos recientes
+            Acceso rápido
           </p>
-          <ul className="space-y-0.5">
-            {recentProjects.map((p) => (
-              <li key={p.name}>
-                <Link
-                  href="/"
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all duration-100 group"
-                >
-                  <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", statusDot[p.status])} />
-                  <span className="truncate flex-1">{p.name}</span>
-                </Link>
-              </li>
-            ))}
-            <li>
-              <Link
-                href="/cotizador"
-                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all duration-100"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Nuevo proyecto</span>
-              </Link>
-            </li>
-          </ul>
+          <Link
+            href="/cotizador"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all duration-100"
+          >
+            <Plus className="w-3 h-3" />
+            <span>Nuevo presupuesto</span>
+          </Link>
         </div>
       </nav>
 
       {/* User */}
-      <div className="border-t border-slate-800 p-3">
-        <div className="flex items-center gap-2.5 px-1 py-1 rounded-md hover:bg-white/5 cursor-pointer transition-colors group">
+      <div className="border-t border-slate-800 p-3 space-y-1">
+        <div className="flex items-center gap-2.5 px-1 py-1 rounded-md">
           <div className="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold shrink-0">
-            {mockUser.name.charAt(0)}
+            {initial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-300 truncate">{mockUser.name}</p>
-            <div className="flex items-center gap-1">
-              <p className="text-[11px] text-slate-500 truncate">{mockOrg.name}</p>
-              <span className="text-[9px] font-semibold text-indigo-400 bg-indigo-900/40 border border-indigo-800/50 px-1 rounded-sm">
-                {planLabel[mockOrg.plan]}
-              </span>
-            </div>
+            <p className="text-xs font-medium text-slate-300 truncate">
+              {user?.full_name ?? user?.email ?? "Usuario"}
+            </p>
+            <p className="text-[11px] text-slate-500 truncate">
+              {user?.company ?? user?.email ?? ""}
+            </p>
           </div>
-          <Settings className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition-colors shrink-0" />
         </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-100"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Cerrar sesión
+        </button>
       </div>
     </aside>
   )

@@ -11,30 +11,120 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   Tooltip,
 } from "recharts"
-import {
-  licitacionMeta,
-  analysisSteps,
-  compatibilidad,
-  radarData,
-  requisitos,
-  riesgos,
-  garantias,
-  experienciaRequerida,
-  criteriosEvaluacion,
-  analysisStats,
-  type ComplianceStatus,
-  type RiskLevel,
-} from "@/lib/mock-licitacion"
 
-// ── Types & helpers ────────────────────────────────────────────
-type Phase = "idle" | "processing" | "results"
-type TabKey = "requisitos" | "riesgos" | "garantias" | "experiencia"
+// ── Types ──────────────────────────────────────────────────────
+type ComplianceStatus = "cumple" | "verificar" | "incumple" | "na"
+type RiskLevel        = "HIGH" | "MEDIUM" | "LOW"
+type Phase            = "idle" | "processing" | "results"
+type TabKey           = "requisitos" | "riesgos" | "garantias" | "experiencia"
 
+interface LicitacionMeta {
+  nombre: string
+  proceso: string
+  entidad: string
+  sector: string
+  tipo: string
+  objeto: string
+  departamento?: string
+  valorReferencial: number
+  moneda: string
+  plazoEjecucion: number
+  totalPaginas: number
+  compatibilidadGlobal: number
+  riesgoGlobal: RiskLevel
+  alertasCount: number
+}
+
+interface Compatibilidad {
+  global: number
+  tecnico: number
+  economico: number
+  experiencia: number
+  administrativo: number
+  ambiental: number
+}
+
+interface RequisitoItem {
+  id: string
+  description: string
+  detail: string
+  status: ComplianceStatus
+  critical: boolean
+  clausula?: string
+}
+
+interface RequisitoGroup {
+  id: string
+  title: string
+  category: "tecnico" | "economico" | "administrativo"
+  items: RequisitoItem[]
+}
+
+interface Riesgo {
+  id: string
+  titulo: string
+  descripcion: string
+  level: RiskLevel
+  probability: string
+  impacto: string
+  mitigacion: string
+  clausula?: string
+  importeRiesgo?: string
+  tipo: string
+}
+
+interface Garantia {
+  id: string
+  tipo: string
+  descripcion: string
+  monto: number
+  montoPct: string
+  plazo: string
+  tipoDocumento: string
+  momento: string
+  nota?: string
+  clausula?: string
+}
+
+interface ExperienciaItem {
+  id: string
+  titulo: string
+  requisito: string
+  match: ComplianceStatus
+  critical: boolean
+  clausula?: string
+  empresaEstado: string
+  detalle?: string
+}
+
+interface CriterioEvaluacion {
+  factor: string
+  puntaje: number
+  tipo: "económico" | "técnico"
+}
+
+interface Insights {
+  conclusion: string
+  riesgoPrincipal: string
+  recomendacion: string
+}
+
+interface LicitacionData {
+  meta: LicitacionMeta
+  compatibilidad: Compatibilidad
+  requisitos: RequisitoGroup[]
+  riesgos: Riesgo[]
+  garantias: Garantia[]
+  experienciaRequerida: ExperienciaItem[]
+  criteriosEvaluacion: CriterioEvaluacion[]
+  insights: Insights
+}
+
+// ── Helpers ────────────────────────────────────────────────────
 function fmt(n: number) {
   return new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", maximumFractionDigits: 0 }).format(n)
 }
 
-// ── Compliance badge ───────────────────────────────────────────
 function StatusBadge({ status }: { status: ComplianceStatus }) {
   const cfg = {
     cumple:    { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", label: "Cumple",    Icon: CheckCircle },
@@ -45,27 +135,20 @@ function StatusBadge({ status }: { status: ComplianceStatus }) {
   const { bg, label, Icon } = cfg
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-semibold ${bg}`}>
-      <Icon className="w-3 h-3" />
-      {label}
+      <Icon className="w-3 h-3" />{label}
     </span>
   )
 }
 
-// ── Risk badge ─────────────────────────────────────────────────
 function RiskBadge({ level }: { level: RiskLevel }) {
   const cfg = {
-    HIGH:   { bg: "bg-rose-500/10 text-rose-400 border-rose-500/30",   label: "ALTO" },
-    MEDIUM: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/30", label: "MEDIO" },
-    LOW:    { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", label: "BAJO" },
+    HIGH:   { bg: "bg-rose-500/10 text-rose-400 border-rose-500/30",             label: "ALTO" },
+    MEDIUM: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/30",           label: "MEDIO" },
+    LOW:    { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",     label: "BAJO" },
   }[level]
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-bold tracking-wide ${cfg.bg}`}>
-      {cfg.label}
-    </span>
-  )
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-bold tracking-wide ${cfg.bg}`}>{cfg.label}</span>
 }
 
-// ── Compatibility meter ────────────────────────────────────────
 function CompatMeter({ pct, color = "#6366f1" }: { pct: number; color?: string }) {
   return (
     <div className="flex items-center gap-2">
@@ -77,8 +160,20 @@ function CompatMeter({ pct, color = "#6366f1" }: { pct: number; color?: string }
   )
 }
 
+// ── Processing steps (generic) ─────────────────────────────────
+const GENERIC_STEPS = [
+  { id: "s1", label: "Cargando y procesando documento" },
+  { id: "s2", label: "Identificando entidad y proceso licitatorio" },
+  { id: "s3", label: "Extrayendo valor referencial y plazos" },
+  { id: "s4", label: "Analizando requisitos técnicos y administrativos" },
+  { id: "s5", label: "Evaluando criterios de calificación" },
+  { id: "s6", label: "Detectando cláusulas de riesgo" },
+  { id: "s7", label: "Verificando garantías exigidas" },
+  { id: "s8", label: "Calculando compatibilidad empresa" },
+]
+
 // ── Upload Phase ───────────────────────────────────────────────
-function UploadPhase({ onStart }: { onStart: () => void }) {
+function UploadPhase({ onStart }: { onStart: (file: File | null) => void }) {
   const [dragging, setDragging] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -102,7 +197,6 @@ function UploadPhase({ onStart }: { onStart: () => void }) {
         </p>
       </div>
 
-      {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
@@ -113,8 +207,7 @@ function UploadPhase({ onStart }: { onStart: () => void }) {
       >
         <input ref={inputRef} type="file" accept=".pdf" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f) }} />
-        <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors
-          ${dragging ? "bg-violet-500/20" : "bg-slate-700"}`}>
+        <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${dragging ? "bg-violet-500/20" : "bg-slate-700"}`}>
           <Upload className={`w-7 h-7 ${dragging ? "text-violet-400" : "text-slate-400"}`} />
         </div>
         {file ? (
@@ -124,7 +217,7 @@ function UploadPhase({ onStart }: { onStart: () => void }) {
               <p className="text-slate-400 text-sm">{(file.size / 1024 / 1024).toFixed(1)} MB · PDF</p>
             </div>
             <button
-              onClick={(e) => { e.stopPropagation(); onStart() }}
+              onClick={(e) => { e.stopPropagation(); onStart(file) }}
               className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-colors"
             >
               Analizar con IA
@@ -141,15 +234,14 @@ function UploadPhase({ onStart }: { onStart: () => void }) {
         )}
       </div>
 
-      {/* Demo shortcut */}
       <div className="flex flex-col items-center gap-2">
-        <p className="text-slate-500 text-sm">o prueba con un ejemplo real</p>
+        <p className="text-slate-500 text-sm">o prueba una licitación de ejemplo</p>
         <button
-          onClick={onStart}
+          onClick={() => onStart(null)}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-violet-500/40 text-violet-400 hover:bg-violet-500/10 transition-colors font-medium text-sm"
         >
           <Zap className="w-4 h-4" />
-          Usar demo — LP-001-2026-SEDAPAL · PTAR Lima Norte
+          Generar análisis de ejemplo
         </button>
       </div>
     </div>
@@ -166,43 +258,29 @@ function ProcessingPhase({ step }: { step: number }) {
           <Zap className="w-8 h-8 text-white animate-pulse" />
         </div>
         <h2 className="text-2xl font-bold text-white mb-1">Analizando licitación…</h2>
-        <p className="text-slate-400">{licitacionMeta.proceso} · {licitacionMeta.totalPaginas} páginas</p>
+        <p className="text-slate-400">La IA está procesando el documento</p>
       </div>
-
-      {/* Steps */}
       <div className="w-full max-w-lg space-y-2">
-        {analysisSteps.map((s, i) => {
-          const done = i < step
-          const active = i === step
+        {GENERIC_STEPS.map((s, i) => {
+          const done = i < step, active = i === step
           return (
-            <div key={s.id} className={`flex items-start gap-3 p-3 rounded-xl transition-all
-              ${active ? "bg-violet-500/10 border border-violet-500/30" : "border border-transparent"}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
-                ${done ? "bg-emerald-500" : active ? "bg-violet-500 animate-pulse" : "bg-slate-700"}`}>
-                {done
-                  ? <CheckCircle className="w-3.5 h-3.5 text-white" />
-                  : <span className="text-xs font-bold text-white">{i + 1}</span>}
+            <div key={s.id} className={`flex items-start gap-3 p-3 rounded-xl transition-all ${active ? "bg-violet-500/10 border border-violet-500/30" : "border border-transparent"}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? "bg-emerald-500" : active ? "bg-violet-500 animate-pulse" : "bg-slate-700"}`}>
+                {done ? <CheckCircle className="w-3.5 h-3.5 text-white" /> : <span className="text-xs font-bold text-white">{i + 1}</span>}
               </div>
-              <div>
-                <p className={`text-sm font-medium ${done ? "text-slate-400 line-through" : active ? "text-white" : "text-slate-500"}`}>
-                  {s.label}
-                </p>
-                {active && <p className="text-xs text-violet-400 mt-0.5">{s.detail}</p>}
-              </div>
+              <p className={`text-sm font-medium mt-0.5 ${done ? "text-slate-400 line-through" : active ? "text-white" : "text-slate-500"}`}>{s.label}</p>
             </div>
           )
         })}
       </div>
-
-      {/* Progress */}
       <div className="w-full max-w-lg">
         <div className="flex justify-between text-xs text-slate-500 mb-1.5">
           <span>Procesando…</span>
-          <span>{Math.round((step / analysisSteps.length) * 100)}%</span>
+          <span>{Math.round((step / GENERIC_STEPS.length) * 100)}%</span>
         </div>
         <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
           <div className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${(step / analysisSteps.length) * 100}%`, background: "linear-gradient(90deg, #7c3aed, #4f46e5)" }} />
+            style={{ width: `${(step / GENERIC_STEPS.length) * 100}%`, background: "linear-gradient(90deg, #7c3aed, #4f46e5)" }} />
         </div>
       </div>
     </div>
@@ -210,36 +288,55 @@ function ProcessingPhase({ step }: { step: number }) {
 }
 
 // ── Results Phase ──────────────────────────────────────────────
-function ResultsPhase() {
+function ResultsPhase({ data }: { data: LicitacionData }) {
   const [tab, setTab] = useState<TabKey>("requisitos")
-  const [expandedGroup, setExpandedGroup] = useState<string | null>("g1")
-  const [expandedRisk, setExpandedRisk] = useState<string | null>("rsk1")
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(data.requisitos[0]?.id ?? null)
+  const [expandedRisk, setExpandedRisk] = useState<string | null>(data.riesgos[0]?.id ?? null)
+
+  const { meta, compatibilidad, requisitos, riesgos, garantias, experienciaRequerida, criteriosEvaluacion, insights } = data
+
+  const allItems = requisitos.flatMap((g) => g.items)
+  const stats = {
+    totalRequisitos: allItems.length,
+    cumple:          allItems.filter((i) => i.status === "cumple").length,
+    verificar:       allItems.filter((i) => i.status === "verificar").length,
+    incumple:        allItems.filter((i) => i.status === "incumple").length,
+    na:              allItems.filter((i) => i.status === "na").length,
+    riesgosHigh:     riesgos.filter((r) => r.level === "HIGH").length,
+    riesgosMedium:   riesgos.filter((r) => r.level === "MEDIUM").length,
+    riesgosLow:      riesgos.filter((r) => r.level === "LOW").length,
+    garantiasTotal:  garantias.reduce((s, g) => s + (g.monto ?? 0), 0),
+  }
+
+  const radarData = [
+    { dimension: "Técnico",        empresa: compatibilidad.tecnico,        requerido: 100 },
+    { dimension: "Económico",      empresa: compatibilidad.economico,      requerido: 100 },
+    { dimension: "Experiencia",    empresa: compatibilidad.experiencia,    requerido: 100 },
+    { dimension: "Administrativo", empresa: compatibilidad.administrativo, requerido: 100 },
+    { dimension: "Ambiental",      empresa: compatibilidad.ambiental,      requerido: 100 },
+  ]
 
   const tabs: { key: TabKey; label: string; count?: string; icon: React.ElementType }[] = [
-    { key: "requisitos",  label: "Requisitos",  count: `${analysisStats.totalRequisitos}`,  icon: FileText },
-    { key: "riesgos",     label: "Riesgos",     count: `${riesgos.length}`,                 icon: AlertOctagon },
-    { key: "garantias",   label: "Garantías",   count: `${garantias.length}`,               icon: Shield },
-    { key: "experiencia", label: "Experiencia", count: `${experienciaRequerida.length}`,    icon: Award },
+    { key: "requisitos",  label: "Requisitos",  count: `${stats.totalRequisitos}`, icon: FileText },
+    { key: "riesgos",     label: "Riesgos",     count: `${riesgos.length}`,        icon: AlertOctagon },
+    { key: "garantias",   label: "Garantías",   count: `${garantias.length}`,      icon: Shield },
+    { key: "experiencia", label: "Experiencia", count: `${experienciaRequerida.length}`, icon: Award },
   ]
 
   return (
     <div className="space-y-6">
-      {/* Header strip */}
+      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/30 text-violet-400 text-xs font-semibold">
-              {licitacionMeta.proceso}
-            </span>
-            <span className="text-slate-500 text-xs">{licitacionMeta.tipo} · {licitacionMeta.entidad}</span>
+            <span className="px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/30 text-violet-400 text-xs font-semibold">{meta.proceso}</span>
+            <span className="text-slate-500 text-xs">{meta.tipo} · {meta.entidad}</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">{licitacionMeta.nombre}</h1>
-          <p className="text-slate-400 text-sm mt-0.5">{licitacionMeta.objeto}</p>
+          <h1 className="text-2xl font-bold text-white">{meta.nombre}</h1>
+          <p className="text-slate-400 text-sm mt-0.5">{meta.objeto}</p>
         </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors flex items-center gap-2"
-        >
+        <button onClick={() => window.location.reload()}
+          className="px-4 py-2 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors flex items-center gap-2">
           <Upload className="w-4 h-4" /> Nueva licitación
         </button>
       </div>
@@ -247,10 +344,10 @@ function ResultsPhase() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Valor Referencial",  value: fmt(licitacionMeta.valorReferencial), icon: DollarSign, color: "text-indigo-400", bg: "bg-indigo-500/10" },
-          { label: "Plazo de ejecución", value: `${licitacionMeta.plazoEjecucion} meses`,  icon: Clock,     color: "text-cyan-400",   bg: "bg-cyan-500/10" },
-          { label: "Páginas analizadas", value: `${licitacionMeta.totalPaginas}`,            icon: FileText,  color: "text-violet-400", bg: "bg-violet-500/10" },
-          { label: "Sector",             value: licitacionMeta.sector,                        icon: Building2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+          { label: "Valor Referencial",  value: fmt(meta.valorReferencial), icon: DollarSign, color: "text-indigo-400", bg: "bg-indigo-500/10" },
+          { label: "Plazo de ejecución", value: `${meta.plazoEjecucion} meses`,  icon: Clock,     color: "text-cyan-400",   bg: "bg-cyan-500/10" },
+          { label: "Páginas analizadas", value: `${meta.totalPaginas}`,           icon: FileText,  color: "text-violet-400", bg: "bg-violet-500/10" },
+          { label: "Sector",             value: meta.sector,                       icon: Building2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${bg}`}>
@@ -264,7 +361,6 @@ function ResultsPhase() {
 
       {/* Compatibility + Radar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Compatibility summary */}
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-4">
           <h3 className="text-sm font-semibold text-white">Compatibilidad Global</h3>
           <div className="text-center py-2">
@@ -272,8 +368,7 @@ function ResultsPhase() {
               <svg viewBox="0 0 100 100" className="w-28 h-28 -rotate-90">
                 <circle cx="50" cy="50" r="38" fill="none" stroke="#1e293b" strokeWidth="10" />
                 <circle cx="50" cy="50" r="38" fill="none" stroke="#6366f1" strokeWidth="10"
-                  strokeDasharray={`${(compatibilidad.global / 100) * 238.76} 238.76`}
-                  strokeLinecap="round" />
+                  strokeDasharray={`${(compatibilidad.global / 100) * 238.76} 238.76`} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-black text-white">{compatibilidad.global}%</span>
@@ -299,7 +394,6 @@ function ResultsPhase() {
           </div>
         </div>
 
-        {/* Radar chart */}
         <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5">
           <h3 className="text-sm font-semibold text-white mb-1">Radar de Compatibilidad</h3>
           <p className="text-xs text-slate-400 mb-4">Tu empresa vs. requisitos de la licitación</p>
@@ -309,20 +403,15 @@ function ResultsPhase() {
               <PolarAngleAxis dataKey="dimension" tick={{ fill: "#94a3b8", fontSize: 12 }} />
               <Radar name="Requerido" dataKey="requerido" stroke="#334155" fill="#334155" fillOpacity={0.3} />
               <Radar name="Empresa" dataKey="empresa" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} dot={{ fill: "#6366f1", r: 4 }} />
-              <Tooltip
-                contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8 }}
-                labelStyle={{ color: "#94a3b8" }}
-                itemStyle={{ color: "#c7d2fe" }}
-              />
+              <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8 }} labelStyle={{ color: "#94a3b8" }} itemStyle={{ color: "#c7d2fe" }} />
             </RadarChart>
           </ResponsiveContainer>
-          {/* Compliance summary strip */}
           <div className="grid grid-cols-4 gap-3 mt-3">
             {[
-              { label: "Cumple",    count: analysisStats.cumple,    color: "text-emerald-400", bg: "bg-emerald-500/10" },
-              { label: "Verificar", count: analysisStats.verificar, color: "text-amber-400",   bg: "bg-amber-500/10" },
-              { label: "Incumple",  count: analysisStats.incumple,  color: "text-rose-400",    bg: "bg-rose-500/10" },
-              { label: "N/A",       count: analysisStats.na,        color: "text-slate-400",   bg: "bg-slate-700" },
+              { label: "Cumple",    count: stats.cumple,    color: "text-emerald-400", bg: "bg-emerald-500/10" },
+              { label: "Verificar", count: stats.verificar, color: "text-amber-400",   bg: "bg-amber-500/10" },
+              { label: "Incumple",  count: stats.incumple,  color: "text-rose-400",    bg: "bg-rose-500/10" },
+              { label: "N/A",       count: stats.na,        color: "text-slate-400",   bg: "bg-slate-700" },
             ].map(({ label, count, color, bg }) => (
               <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
                 <p className={`text-2xl font-black ${color}`}>{count}</p>
@@ -333,7 +422,7 @@ function ResultsPhase() {
         </div>
       </div>
 
-      {/* Criterios de evaluación */}
+      {/* Criterios */}
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <Star className="w-4 h-4 text-amber-400" />
@@ -348,8 +437,7 @@ function ResultsPhase() {
                 <span className="font-bold text-white">{c.puntaje} pts</span>
               </div>
               <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                <div className="h-full rounded-full"
-                  style={{ width: `${c.puntaje}%`, background: c.tipo === "económico" ? "#6366f1" : "#8b5cf6" }} />
+                <div className="h-full rounded-full" style={{ width: `${c.puntaje}%`, background: c.tipo === "económico" ? "#6366f1" : "#8b5cf6" }} />
               </div>
             </div>
           ))}
@@ -371,15 +459,13 @@ function ResultsPhase() {
         </div>
 
         <div className="p-5">
-          {/* ── REQUISITOS tab ── */}
+          {/* REQUISITOS */}
           {tab === "requisitos" && (
             <div className="space-y-3">
               {requisitos.map((group) => (
                 <div key={group.id} className="border border-slate-700 rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-slate-700/30 transition-colors"
-                  >
+                  <button onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-slate-700/30 transition-colors">
                     <div className="flex items-center gap-3">
                       {expandedGroup === group.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                       <span className="font-semibold text-white">{group.title}</span>
@@ -401,18 +487,12 @@ function ResultsPhase() {
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                               <p className="font-medium text-white text-sm">{item.description}</p>
-                              {item.critical && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">Crítico</span>
-                              )}
-                              {item.clausula && (
-                                <span className="text-xs text-slate-500">{item.clausula}</span>
-                              )}
+                              {item.critical && <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">Crítico</span>}
+                              {item.clausula && <span className="text-xs text-slate-500">{item.clausula}</span>}
                             </div>
                             <p className="text-xs text-slate-400">{item.detail}</p>
                           </div>
-                          <div className="flex-shrink-0">
-                            <StatusBadge status={item.status} />
-                          </div>
+                          <div className="flex-shrink-0"><StatusBadge status={item.status} /></div>
                         </div>
                       ))}
                     </div>
@@ -422,15 +502,14 @@ function ResultsPhase() {
             </div>
           )}
 
-          {/* ── RIESGOS tab ── */}
+          {/* RIESGOS */}
           {tab === "riesgos" && (
             <div className="space-y-3">
-              {/* Summary row */}
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {[
-                  { label: "Riesgo Alto",  count: analysisStats.riesgosHigh,   color: "text-rose-400",    bg: "bg-rose-500/10 border-rose-500/20" },
-                  { label: "Riesgo Medio", count: analysisStats.riesgosMedium, color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20" },
-                  { label: "Riesgo Bajo",  count: analysisStats.riesgosLow,    color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+                  { label: "Riesgo Alto",  count: stats.riesgosHigh,   color: "text-rose-400",    bg: "bg-rose-500/10 border-rose-500/20" },
+                  { label: "Riesgo Medio", count: stats.riesgosMedium, color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20" },
+                  { label: "Riesgo Bajo",  count: stats.riesgosLow,    color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
                 ].map(({ label, count, color, bg }) => (
                   <div key={label} className={`border rounded-xl p-3 text-center ${bg}`}>
                     <p className={`text-2xl font-black ${color}`}>{count}</p>
@@ -440,10 +519,8 @@ function ResultsPhase() {
               </div>
               {riesgos.map((risk) => (
                 <div key={risk.id} className="border border-slate-700 rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setExpandedRisk(expandedRisk === risk.id ? null : risk.id)}
-                    className="w-full flex items-start gap-3 p-4 hover:bg-slate-700/30 transition-colors text-left"
-                  >
+                  <button onClick={() => setExpandedRisk(expandedRisk === risk.id ? null : risk.id)}
+                    className="w-full flex items-start gap-3 p-4 hover:bg-slate-700/30 transition-colors text-left">
                     <div className="mt-0.5">{expandedRisk === risk.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -453,9 +530,7 @@ function ResultsPhase() {
                       </div>
                       <p className="font-semibold text-white">{risk.titulo}</p>
                     </div>
-                    {risk.importeRiesgo && (
-                      <span className="text-xs text-slate-400 flex-shrink-0">{risk.importeRiesgo}</span>
-                    )}
+                    {risk.importeRiesgo && <span className="text-xs text-slate-400 flex-shrink-0">{risk.importeRiesgo}</span>}
                   </button>
                   {expandedRisk === risk.id && (
                     <div className="border-t border-slate-700 p-4 space-y-3">
@@ -478,14 +553,13 @@ function ResultsPhase() {
             </div>
           )}
 
-          {/* ── GARANTÍAS tab ── */}
+          {/* GARANTÍAS */}
           {tab === "garantias" && (
             <div className="space-y-4">
-              {/* Total */}
               <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 flex justify-between items-center">
                 <div>
                   <p className="text-xs text-slate-400">Monto total de garantías estimadas</p>
-                  <p className="text-xl font-black text-white">{fmt(analysisStats.garantiasTotal)}</p>
+                  <p className="text-xl font-black text-white">{fmt(stats.garantiasTotal)}</p>
                 </div>
                 <Shield className="w-8 h-8 text-indigo-400" />
               </div>
@@ -528,17 +602,17 @@ function ResultsPhase() {
             </div>
           )}
 
-          {/* ── EXPERIENCIA tab ── */}
+          {/* EXPERIENCIA */}
           {tab === "experiencia" && (
             <div className="space-y-3">
-              {/* Summary */}
               <div className="grid grid-cols-3 gap-3 mb-4">
-                {(["cumple", "verificar", "incumple"] as const).map((s) => {
+                {(["cumple", "verificar", "incumple"] as ComplianceStatus[]).map((s) => {
                   const count = experienciaRequerida.filter((e) => e.match === s).length
                   const cfg = {
-                    cumple:   { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Cumple" },
-                    verificar:{ color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20",   label: "Verificar" },
-                    incumple: { color: "text-rose-400",    bg: "bg-rose-500/10 border-rose-500/20",     label: "Incumple" },
+                    cumple:    { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Cumple" },
+                    verificar: { color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20",    label: "Verificar" },
+                    incumple:  { color: "text-rose-400",    bg: "bg-rose-500/10 border-rose-500/20",      label: "Incumple" },
+                    na:        { color: "text-slate-400",   bg: "bg-slate-700",                           label: "N/A" },
                   }[s]
                   return (
                     <div key={s} className={`border rounded-xl p-3 text-center ${cfg.bg}`}>
@@ -551,16 +625,13 @@ function ResultsPhase() {
               {experienciaRequerida.map((exp) => (
                 <div key={exp.id} className={`border rounded-xl p-5 space-y-3
                   ${exp.match === "incumple" ? "border-rose-500/30 bg-rose-500/5" :
-                    exp.match === "verificar" ? "border-amber-500/30 bg-amber-500/5" :
-                    "border-slate-700"}`}>
+                    exp.match === "verificar" ? "border-amber-500/30 bg-amber-500/5" : "border-slate-700"}`}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <StatusBadge status={exp.match} />
-                        {exp.critical && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">Crítico</span>
-                        )}
-                        <span className="text-xs text-slate-500">{exp.clausula}</span>
+                        {exp.critical && <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">Crítico</span>}
+                        {exp.clausula && <span className="text-xs text-slate-500">{exp.clausula}</span>}
                       </div>
                       <p className="font-bold text-white">{exp.titulo}</p>
                     </div>
@@ -577,9 +648,7 @@ function ResultsPhase() {
                       {exp.empresaEstado}
                     </p>
                   </div>
-                  {exp.detalle && (
-                    <p className="text-xs text-slate-500 italic">{exp.detalle}</p>
-                  )}
+                  {exp.detalle && <p className="text-xs text-slate-500 italic">{exp.detalle}</p>}
                 </div>
               ))}
             </div>
@@ -595,22 +664,24 @@ function ResultsPhase() {
           </div>
           <span className="font-semibold text-violet-300">Recomendación IA</span>
         </div>
-        <p className="text-slate-200 text-sm leading-relaxed">
-          Esta licitación presenta una compatibilidad del <strong className="text-white">79%</strong> con el perfil de la empresa.
-          Las brechas más críticas son la <strong className="text-white">falta de especialista en tratamiento de aguas residuales de gran caudal</strong> y
-          la <strong className="text-white">experiencia acumulada en obras similares</strong> (brecha de S/ 1.96M).
-          Se recomienda <strong className="text-white">postular en consorcio</strong> con una empresa especialista en PTARs,
-          mitigar el riesgo de interferencias solicitando planos AS-BUILT actualizados, y verificar la disponibilidad
-          del terreno antes de comprometer el plazo en la propuesta. El valor referencial es competitivo —
-          participación con descuento del <strong className="text-white">8–12%</strong> es viable sin comprometer rentabilidad.
-        </p>
+        <p className="text-slate-200 text-sm leading-relaxed mb-4">{insights.conclusion}</p>
+        <div className="space-y-2">
+          <div className="flex gap-2 bg-rose-500/10 border border-rose-500/20 rounded-lg p-3">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-rose-200">{insights.riesgoPrincipal}</p>
+          </div>
+          <div className="flex gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+            <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-emerald-200">{insights.recomendacion}</p>
+          </div>
+        </div>
         <div className="flex flex-wrap gap-2 mt-4">
           {[
-            { icon: Users,      label: "Consorciarse con especialista PTAR", color: "text-violet-300" },
-            { icon: TrendingUp, label: "Oferta: ~8% por debajo del VR",      color: "text-indigo-300" },
-            { icon: Briefcase,  label: "Solicitar planos AS-BUILT SEDAPAL",  color: "text-cyan-300" },
-          ].map(({ icon: Icon, label, color }) => (
-            <span key={label} className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-800/60 ${color}`}>
+            { icon: Users,      label: "Revisar capacidad del consorcio" },
+            { icon: Briefcase,  label: "Verificar requisitos críticos" },
+            { icon: TrendingUp, label: "Preparar oferta técnica sólida" },
+          ].map(({ icon: Icon, label }) => (
+            <span key={label} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-800/60 text-violet-300">
               <Icon className="w-3.5 h-3.5" /> {label}
             </span>
           ))}
@@ -622,31 +693,66 @@ function ResultsPhase() {
 
 // ── Main page ──────────────────────────────────────────────────
 export default function LicitacionesPage() {
-  const [phase, setPhase] = useState<Phase>("idle")
-  const [step, setStep] = useState(0)
+  const [phase, setPhase]       = useState<Phase>("idle")
+  const [step, setStep]         = useState(0)
+  const [analysis, setAnalysis] = useState<LicitacionData | null>(null)
+  const [error, setError]       = useState<string | null>(null)
 
-  function startAnalysis() {
+  async function startAnalysis(file: File | null) {
     setPhase("processing")
     setStep(0)
+    setError(null)
+
+    // Animate steps while API call runs in parallel
     let current = 0
-    const tick = () => {
+    const animInterval = setInterval(() => {
       current++
       setStep(current)
-      if (current < analysisSteps.length) {
-        setTimeout(tick, 1000)
+      if (current >= GENERIC_STEPS.length - 1) clearInterval(animInterval)
+    }, 900)
+
+    try {
+      const form = new FormData()
+      if (file) {
+        form.append("file", file)
       } else {
-        setTimeout(() => setPhase("results"), 600)
+        form.append("demo", "true")
       }
+
+      const res  = await fetch("/api/licitaciones/analyze", { method: "POST", body: form })
+      const json = await res.json()
+
+      clearInterval(animInterval)
+      setStep(GENERIC_STEPS.length)
+
+      if (!res.ok || json.error) {
+        setError(json.error ?? "Error al analizar")
+        setPhase("idle")
+        return
+      }
+
+      await new Promise((r) => setTimeout(r, 600))
+      setAnalysis(json.analysis)
+      setPhase("results")
+    } catch (e) {
+      clearInterval(animInterval)
+      setError(e instanceof Error ? e.message : "Error de conexión")
+      setPhase("idle")
     }
-    setTimeout(tick, 900)
   }
 
   return (
     <div className="min-h-screen bg-slate-900 p-6 md:p-8">
       <div className="max-w-5xl mx-auto">
+        {error && (
+          <div className="mb-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            {error}
+          </div>
+        )}
         {phase === "idle"       && <UploadPhase onStart={startAnalysis} />}
         {phase === "processing" && <ProcessingPhase step={step} />}
-        {phase === "results"    && <ResultsPhase />}
+        {phase === "results" && analysis && <ResultsPhase data={analysis} />}
       </div>
     </div>
   )
