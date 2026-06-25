@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import {
   Sparkles, Check, Loader2, ChevronDown, ChevronRight,
   AlertTriangle, Download, Share2, RefreshCw, FileSpreadsheet,
-  MapPin, DollarSign, Info, ArrowLeft, TrendingUp, X,
+  MapPin, Info, ArrowLeft, TrendingUp, X, Building2, Droplets, Road,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -38,8 +38,8 @@ const riskColors = {
 export default function CotizadorPage() {
   const [phase, setPhase]                       = useState<Phase>("idle")
   const [description, setDescription]           = useState("")
-  const [region, setRegion]                     = useState("Lima, Perú")
-  const [currency, setCurrency]                 = useState("PEN")
+  const [projectType, setProjectType]           = useState<"edificacion" | "acueducto" | "vias">("edificacion")
+  const [region, setRegion]                     = useState("Bogotá, Colombia")
   const [steps, setSteps]                       = useState<ProcessingStep[]>(PROCESSING_STEPS)
   const [progress, setProgress]                 = useState(0)
   const [budget, setBudget]                     = useState<GeneratedBudget | null>(null)
@@ -79,7 +79,7 @@ export default function CotizadorPage() {
       const res = await fetch("/api/cotizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description, region, currency }),
+        body: JSON.stringify({ description, region, currency: "COP", projectType }),
         signal: abortRef.current.signal,
       })
 
@@ -244,11 +244,40 @@ export default function CotizadorPage() {
 
               <Card className="shadow-md border-slate-200">
                 <CardContent className="pt-5 space-y-4">
+                  {/* Project type selector */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: "edificacion", label: "Edificación",          icon: Building2, desc: "Residencial, comercial, industrial" },
+                      { value: "acueducto",   label: "Acueducto / Alc.",     icon: Droplets,  desc: "Redes, tuberías, saneamiento" },
+                      { value: "vias",        label: "Vías",                 icon: Road,      desc: "Carreteras, pavimentos, puentes" },
+                    ] as const).map(({ value, label, icon: Icon, desc }) => (
+                      <button
+                        key={value}
+                        onClick={() => setProjectType(value)}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-all ${
+                          projectType === value
+                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                            : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 ${projectType === value ? "text-indigo-600" : "text-slate-400"}`} />
+                        <span className="text-xs font-semibold">{label}</span>
+                        <span className="text-[10px] leading-tight text-slate-400">{desc}</span>
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="relative">
                     <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Ejemplo: Construcción de edificio de oficinas corporativas de 8 pisos en Miraflores, Lima. Área 800 m2 por piso. Estructura aporticada f'c=280 kg/cm², fachada vidrio spider, 3 ascensores, 2 sótanos..."
+                      placeholder={
+                        projectType === "acueducto"
+                          ? "Ejemplo: Reposición de colector sanitario DN 315mm en calle 5 entre carreras 8 y 15, Popayán. Longitud 77 ml, incluye excavación en conglomerado, suministro e instalación tubería PVC, rellenos tipo II, reposición de pavimento asfaltico y construcción de 2 cámaras de inspección..."
+                          : projectType === "vias"
+                          ? "Ejemplo: Construcción de vía terciaria en concreto rígido, longitud 2.5 km, ancho 6 m, municipio de Totoró, Cauca. Incluye adecuación de subrasante, subbase granular 20cm, base granular 15cm y placa de concreto 21 MPa e=18cm..."
+                          : "Ejemplo: Construcción de edificio de oficinas corporativas de 8 pisos en Miraflores, Lima. Área 800 m2 por piso. Estructura aporticada f'c=280 kg/cm², fachada vidrio spider, 3 ascensores, 2 sótanos..."
+                      }
                       className="min-h-[180px] text-sm leading-relaxed border-slate-200 focus-visible:ring-indigo-500"
                       maxLength={2000}
                     />
@@ -259,40 +288,28 @@ export default function CotizadorPage() {
 
                   <Separator />
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5" /> Región
-                      </label>
-                      <select
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option>Lima, Perú</option>
-                        <option>Arequipa, Perú</option>
-                        <option>Bogotá, Colombia</option>
-                        <option>Medellín, Colombia</option>
-                        <option>Ciudad de México</option>
-                        <option>Santiago, Chile</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                        <DollarSign className="w-3.5 h-3.5" /> Moneda
-                      </label>
-                      <select
-                        value={currency}
-                        onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="PEN">PEN — Sol peruano</option>
-                        <option value="USD">USD — Dólar americano</option>
-                        <option value="COP">COP — Peso colombiano</option>
-                        <option value="CLP">CLP — Peso chileno</option>
-                        <option value="MXN">MXN — Peso mexicano</option>
-                      </select>
-                    </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" /> Ciudad / Región
+                    </label>
+                    <select
+                      value={region}
+                      onChange={(e) => setRegion(e.target.value)}
+                      className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option>Bogotá, Colombia</option>
+                      <option>Medellín, Colombia</option>
+                      <option>Cali, Colombia</option>
+                      <option>Barranquilla, Colombia</option>
+                      <option>Cartagena, Colombia</option>
+                      <option>Bucaramanga, Colombia</option>
+                      <option>Manizales, Colombia</option>
+                      <option>Pereira, Colombia</option>
+                      <option>Popayán, Colombia</option>
+                      <option>Pasto, Colombia</option>
+                      <option>Ibagué, Colombia</option>
+                      <option>Villavicencio, Colombia</option>
+                    </select>
                   </div>
 
                   <Button
@@ -306,7 +323,11 @@ export default function CotizadorPage() {
                     Analizar con IA
                   </Button>
                   <p className="text-center text-xs text-slate-400">
-                    ✦ Precios CAPECO · CAMACOL · Mercado LATAM {new Date().getFullYear()}
+                    {projectType === "acueducto"
+                      ? `✦ Precios INVIAS · Operadores de servicios públicos · COP ${new Date().getFullYear()}`
+                      : projectType === "vias"
+                      ? `✦ Precios INVIAS · Infraestructura vial · COP ${new Date().getFullYear()}`
+                      : `✦ Precios CAMACOL · Construcción Colombia · COP ${new Date().getFullYear()}`}
                   </p>
                 </CardContent>
               </Card>

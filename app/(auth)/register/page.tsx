@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Building2, ArrowRight, Sparkles } from "lucide-react"
+import { Building2, ArrowRight, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
@@ -17,6 +17,17 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [countdown, setCountdown] = useState(3)
+
+  useEffect(() => {
+    if (!success) return
+    const interval = setInterval(() => setCountdown(c => c - 1), 1000)
+    return () => clearInterval(interval)
+  }, [success])
+
+  useEffect(() => {
+    if (countdown <= 0) router.push("/login")
+  }, [countdown, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,15 +58,16 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white px-6">
         <div className="max-w-sm text-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl gradient-ai flex items-center justify-center mx-auto">
-            <Sparkles className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900">¡Casi listo!</h2>
+          <h2 className="text-2xl font-bold text-slate-900">¡Cuenta creada!</h2>
           <p className="text-slate-500 text-sm">
-            Revisa tu correo <strong>{email}</strong> y haz click en el enlace de confirmación.
+            Tu cuenta ha sido creada exitosamente.<br />
+            Redirigiendo al login en <strong>{countdown}</strong>...
           </p>
           <Link href="/login">
-            <Button variant="outline" className="w-full mt-2">Volver al login</Button>
+            <Button className="w-full mt-2">Iniciar sesión ahora</Button>
           </Link>
         </div>
       </div>

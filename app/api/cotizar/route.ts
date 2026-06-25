@@ -1,6 +1,7 @@
 import Groq from "groq-sdk"
 import { NextRequest, NextResponse } from "next/server"
-import { COTIZAR_SYSTEM_PROMPT } from "@/lib/cotizar-prompt"
+import { buildSystemPrompt, type ProjectType } from "@/lib/cotizar-prompt"
+import { createClient } from "@/lib/supabase/server"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -12,11 +13,30 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { description, region = "Lima, Perú", currency = "PEN" } = await req.json()
+  const { description, region = "Lima, Perú", currency = "PEN", projectType = "edificacion" } = await req.json()
 
   if (!description || description.trim().length < 20) {
     return NextResponse.json({ error: "Descripción demasiado corta" }, { status: 400 })
   }
+
+  // Load user's imported prices if authenticated
+  let userPrices: { description: string; unit: string; unit_price: number; category: string }[] = []
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data } = await supabase
+        .from("price_items")
+        .select("description, unit, unit_price, category")
+        .eq("user_id", user.id)
+        .limit(200)
+      userPrices = data ?? []
+    }
+  } catch {
+    // Non-fatal: proceed without user prices
+  }
+
+  const systemPrompt = buildSystemPrompt(projectType as ProjectType, userPrices)
 
   try {
     const completion = await groq.chat.completions.create({
@@ -24,10 +44,10 @@ export async function POST(req: NextRequest) {
       max_tokens: 8000,
       temperature: 0.3,
       messages: [
-        { role: "system", content: COTIZAR_SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         {
           role: "user",
-          content: `Genera el presupuesto para la siguiente obra:\n\nRegión: ${region}\nMoneda: ${currency}\n\nDescripción:\n${description}`,
+          content: `Genera el presupuesto para la siguiente obra:\n\nRegión: ${region}\nMoneda: ${currency}\nTipo de obra: ${projectType}\n\nDescripción:\n${description}`,
         },
       ],
     })
