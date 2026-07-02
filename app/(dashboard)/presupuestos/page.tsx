@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { exportPresupuestoExcel } from "@/lib/excel-export"
-import { formatCurrency, timeAgo } from "@/lib/utils"
+import { formatCurrency, timeAgo, taxLabel, defaultTaxRate } from "@/lib/utils"
 import type { GeneratedBudget } from "@/types"
 import Link from "next/link"
 
@@ -168,7 +168,8 @@ export default function PresupuestosPage() {
   const profit     = baseCost * (data.profitPct ?? 0.08)
   const contingency = data.contingencyAmount ?? baseCost * 0.05
   const subtotal   = baseCost + overhead + profit + contingency
-  const tax        = subtotal * (data.taxRate ?? 0.18)
+  const taxRate    = data.taxRate ?? defaultTaxRate(data.currency)
+  const tax        = subtotal * taxRate
   const total      = subtotal + tax
   const totalPartidas = data.sections?.reduce((s, sec) => s + sec.items.length, 0) ?? 0
   const apu        = data.apuSample
@@ -428,7 +429,7 @@ export default function PresupuestosPage() {
                   <span className="font-semibold font-mono text-slate-800">{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
-                  <span>IGV 18%</span>
+                  <span>{taxLabel(data.currency)} {Math.round(taxRate * 100)}%</span>
                   <span className="font-mono">{formatCurrency(tax)}</span>
                 </div>
                 <div className="border-t-2 border-slate-900 pt-2.5 mt-1">

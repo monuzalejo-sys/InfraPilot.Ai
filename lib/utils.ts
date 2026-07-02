@@ -9,6 +9,24 @@ export function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
+export function taxLabel(currency?: string): string {
+  switch (currency) {
+    case "COP": return "IVA"
+    case "PEN": return "IGV"
+    case "MXN": return "IVA"
+    default: return "Impuesto"
+  }
+}
+
+export function defaultTaxRate(currency?: string): number {
+  switch (currency) {
+    case "COP": return 0.19
+    case "PEN": return 0.18
+    case "MXN": return 0.16
+    default: return 0.18
+  }
+}
+
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("es-PE", {
     weekday: "long",

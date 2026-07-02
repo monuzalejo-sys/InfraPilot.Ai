@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { exportPresupuestoExcel } from "@/lib/excel-export"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, taxLabel, defaultTaxRate } from "@/lib/utils"
 import type { GeneratedBudget, BudgetItem, ApuComponent, ProcessingStep } from "@/types"
 
 type Phase = "idle" | "processing" | "results"
@@ -161,7 +161,8 @@ export default function CotizadorPage() {
   const profitAmount    = baseCost * (profitPct / 100)
   const contingencyAmt  = budget?.contingencyAmount ?? baseCost * 0.05
   const subtotal        = baseCost + overheadAmount + profitAmount + contingencyAmt
-  const taxAmount       = subtotal * 0.18
+  const taxRate         = budget?.taxRate ?? defaultTaxRate(budget?.currency)
+  const taxAmount       = subtotal * taxRate
   const total           = subtotal + taxAmount
   const totalPartidas   = budget?.sections.reduce((s, sec) => s + sec.items.length, 0) ?? 0
   const apu             = budget?.apuSample
@@ -616,7 +617,7 @@ export default function CotizadorPage() {
                       <span className="text-sm font-semibold text-slate-800 font-mono">{formatCurrency(subtotal)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-500">IGV 18%</span>
+                      <span className="text-sm text-slate-500">{taxLabel(budget?.currency)} {Math.round(taxRate * 100)}%</span>
                       <span className="text-sm text-slate-600 font-mono">{formatCurrency(taxAmount)}</span>
                     </div>
 
