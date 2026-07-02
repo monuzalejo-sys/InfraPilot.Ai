@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react"
 import {
-  Plus, Trash2, Edit2, ChevronRight, Calculator,
+  Plus, Trash2, Edit2, Calculator,
   Package, HardHat, Wrench, Search, Check, X, ArrowLeft,
-  ChevronDown,
 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

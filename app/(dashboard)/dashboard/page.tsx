@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import {
-  FolderOpen, Banknote, Gavel, Zap, ArrowUpRight, Sparkles,
-  CheckCircle, FileDown, Clock, TrendingUp, Plus, ChevronRight,
-  AlertTriangle, Bot,
+  FolderOpen, Banknote, Gavel, ArrowUpRight, Sparkles,
+  TrendingUp, ChevronRight,
+  Bot,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import Groq from "groq-sdk"
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-
 const SYSTEM_PROMPT = `Eres un especialista en análisis de licitaciones públicas en Latinoamérica. Analiza el texto del documento de licitación y devuelve ÚNICAMENTE un JSON válido sin texto adicional.
 
 Estructura exacta del JSON (respeta los nombres de campos):
@@ -111,6 +109,15 @@ Reglas:
 - Para compatibilidad: asume empresa constructora mediana con 10 años de experiencia e ISO básico`
 
 export async function POST(req: NextRequest) {
+  if (!process.env.GROQ_API_KEY) {
+    return NextResponse.json(
+      { error: "GROQ_API_KEY no configurada. Agrega la clave en .env.local" },
+      { status: 500 }
+    )
+  }
+
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
   try {
     const formData  = await req.formData()
     const file      = formData.get("file") as File | null

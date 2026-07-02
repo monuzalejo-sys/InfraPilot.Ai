@@ -3,8 +3,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { buildSystemPrompt, type ProjectType } from "@/lib/cotizar-prompt"
 import { createClient } from "@/lib/supabase/server"
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-
 export async function POST(req: NextRequest) {
   if (!process.env.GROQ_API_KEY) {
     return NextResponse.json(
@@ -12,6 +10,8 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
   const { description, region = "Lima, Perú", currency = "PEN", projectType = "edificacion" } = await req.json()
 

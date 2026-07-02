@@ -96,7 +96,7 @@ export default function LoginPage() {
 
           <div className="border border-slate-700 rounded-xl p-5 bg-slate-800/50 backdrop-blur-sm">
             <p className="text-slate-300 text-sm italic leading-relaxed">
-              "Lo que antes me tomaba 3 días, ahora lo tengo en 4 minutos. Y con precios reales del mercado."
+              &ldquo;Lo que antes me tomaba 3 días, ahora lo tengo en 4 minutos. Y con precios reales del mercado.&rdquo;
             </p>
             <div className="flex items-center gap-2 mt-3">
               <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">

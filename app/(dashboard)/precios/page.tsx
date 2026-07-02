@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import {
-  Search, Plus, Upload, Trash2, Edit2, Check, X,
-  Package, HardHat, Wrench, ChevronDown, FileSpreadsheet,
+  Search, Plus, Trash2, Edit2, Check, X,
+  Package, HardHat, Wrench, FileSpreadsheet,
 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
 
 type Category = "material" | "labor" | "equipment"
