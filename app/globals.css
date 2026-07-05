@@ -6,15 +6,19 @@
   --font-mono: var(--font-mono);
 }
 
-/* ── Landing page palette (warm-minimalist) ──────────────────────────
-   Scoped to the landing page only via `.landing`; the dashboard keeps
-   its own slate theme untouched. */
-.landing {
+/* ── Editorial palette (warm-minimalist) ─────────────────────────────
+   Global design tokens: landing AND app share the same warm-paper
+   editorial system (art direction del usuario). */
+:root {
   --paper: #f6f3ed;    /* warm paper background */
   --ink: #1b1a17;      /* near-black ink        */
   --muted: #8a857c;    /* warm secondary gray   */
   --brass: #a8895b;    /* brass accent          */
   --hairline: #e5e0d6; /* hairline borders      */
+  --rail: #232019;     /* dark icon rail (sidebar) */
+  --card: #fbfaf7;     /* raised card surface   */
+  --ok: #5b7a5e;       /* success (muted green) */
+  --warn: #a8623b;     /* alert (burnt sienna)  */
 }
 
 @keyframes fade-in-up {
@@ -34,9 +38,9 @@
   100% { background-position: 200% 0; }
 }
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(139,92,246,0.35); }
-  70% { box-shadow: 0 0 0 8px rgba(139,92,246,0); }
-  100% { box-shadow: 0 0 0 0 rgba(139,92,246,0); }
+  0% { box-shadow: 0 0 0 0 rgba(168,137,91,0.35); }
+  70% { box-shadow: 0 0 0 8px rgba(168,137,91,0); }
+  100% { box-shadow: 0 0 0 0 rgba(168,137,91,0); }
 }
 
 @layer base {
@@ -45,14 +49,14 @@
   body {
     height: 100%;
     font-family: "Inter", system-ui, -apple-system, sans-serif;
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: var(--paper);
+    color: var(--ink);
   }
-  ::selection { background-color: #e0e7ff; color: #3730a3; }
+  ::selection { background-color: #ece4d4; color: #6b5637; }
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 }
 
 @layer utilities {
@@ -66,8 +70,21 @@
     animation: shimmer 1.8s infinite;
   }
   .sidebar-item { border-left: 2px solid transparent; transition: all 120ms ease; }
-  .sidebar-item-active { background: rgba(255,255,255,0.08); border-left: 2px solid #6366f1; }
-  .gradient-ai { background: linear-gradient(135deg,#7c3aed,#4f46e5); }
+  .sidebar-item-active { background: rgba(255,255,255,0.08); border-left: 2px solid var(--brass); }
+  .gradient-ai { background: linear-gradient(135deg,#a8895b,#8a6f47); }
+  /* Editorial primitives (shared contract for all app pages) */
+  .mono-label {
+    font-family: var(--font-mono), monospace;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+  }
+  .editorial-card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+  }
   .card-hover { transition: box-shadow 200ms ease, transform 200ms ease; }
   .card-hover:hover {
     box-shadow: 0 8px 25px -5px rgba(0,0,0,0.1), 0 4px 10px -5px rgba(0,0,0,0.05);

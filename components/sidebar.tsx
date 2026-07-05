@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import {
   LayoutDashboard, Sparkles, FileText, Gavel, TrendingUp,
@@ -160,7 +160,6 @@ function SidebarContent({ onClose, user, pathname, onLogout }: {
 
 export function Sidebar() {
   const pathname = usePathname()
-  const router   = useRouter()
   const [user, setUser]       = useState<UserInfo | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
 
