@@ -11,6 +11,8 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   Tooltip,
 } from "recharts"
+import { isSupabaseConfigured } from "@/lib/supabase/client"
+import { DemoNotice } from "@/components/demo-notice"
 
 // ── Types ──────────────────────────────────────────────────────
 type ComplianceStatus = "cumple" | "verificar" | "incumple" | "na"
@@ -744,6 +746,7 @@ export default function LicitacionesPage() {
   return (
     <div className="min-h-screen bg-slate-900 p-6 md:p-8">
       <div className="max-w-5xl mx-auto">
+        {!isSupabaseConfigured && <DemoNotice variant="dark" className="mb-4" />}
         {error && (
           <div className="mb-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />

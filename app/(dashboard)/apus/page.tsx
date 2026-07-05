@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { formatCurrency, timeAgo } from "@/lib/utils"
+import { isSupabaseConfigured } from "@/lib/supabase/client"
+import { DemoNotice } from "@/components/demo-notice"
 
 type Category = "material" | "labor" | "equipment"
 
@@ -314,11 +316,12 @@ export default function APUsPage() {
   const [loading, setLoading]     = useState(true)
   const [view, setView]           = useState<"list" | "builder">("list")
   const [editApu, setEditApu]     = useState<APU | null>(null)
+  const [fetchError, setFetchError] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     const res = await fetch("/api/apus")
-    if (res.ok) { const { apus } = await res.json(); setApus(apus ?? []) }
+    if (res.ok) { const { apus } = await res.json(); setApus(apus ?? []) } else { setFetchError(true) }
     setLoading(false)
   }, [])
 
@@ -344,6 +347,8 @@ export default function APUsPage() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
+      {(!isSupabaseConfigured || fetchError) && <DemoNotice />}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">APUs</h1>

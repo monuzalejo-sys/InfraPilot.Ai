@@ -166,6 +166,7 @@ export function Sidebar() {
 
   useEffect(() => {
     const supabase = createClient()
+    if (!supabase) return
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setUser({ email: user.email, full_name: user.user_metadata?.full_name, company: user.user_metadata?.company })
     })
@@ -176,6 +177,7 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     const supabase = createClient()
+    if (!supabase) { window.location.href = "/"; return }
     await supabase.auth.signOut()
     window.location.href = "/login"
   }

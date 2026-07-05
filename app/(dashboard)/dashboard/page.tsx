@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
-import { createClient } from "@/lib/supabase/client"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { formatCurrency, getGreeting, timeAgo } from "@/lib/utils"
+import { DemoNotice } from "@/components/demo-notice"
 
 interface Project {
   id: string
@@ -63,15 +64,18 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [recentBudgets, setRecentBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
 
   const load = useCallback(async () => {
     const supabase = createClient()
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (authUser) {
-      setUser({
-        email: authUser.email,
-        full_name: authUser.user_metadata?.full_name,
-      })
+    if (supabase) {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        setUser({
+          email: authUser.email,
+          full_name: authUser.user_metadata?.full_name,
+        })
+      }
     }
 
     const [projectsRes, budgetsRes] = await Promise.all([
@@ -82,10 +86,14 @@ export default function DashboardPage() {
     if (projectsRes.ok) {
       const { projects } = await projectsRes.json()
       setProjects(projects ?? [])
+    } else {
+      setFetchError(true)
     }
     if (budgetsRes.ok) {
       const { budgets } = await budgetsRes.json()
       setRecentBudgets(budgets ?? [])
+    } else {
+      setFetchError(true)
     }
     setLoading(false)
   }, [])
@@ -101,6 +109,8 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
+      {(!isSupabaseConfigured || fetchError) && <DemoNotice />}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

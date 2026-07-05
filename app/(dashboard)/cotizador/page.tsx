@@ -15,6 +15,8 @@ import { Separator } from "@/components/ui/separator"
 import { exportPresupuestoExcel } from "@/lib/excel-export"
 import { formatCurrency, taxLabel, defaultTaxRate } from "@/lib/utils"
 import type { GeneratedBudget, BudgetItem, ApuComponent, ProcessingStep } from "@/types"
+import { isSupabaseConfigured } from "@/lib/supabase/client"
+import { DemoNotice } from "@/components/demo-notice"
 
 type Phase = "idle" | "processing" | "results"
 
@@ -234,6 +236,8 @@ export default function CotizadorPage() {
                   Escribe en lenguaje natural — la IA identificará tipo de obra, partidas, metrados y precios automáticamente.
                 </p>
               </div>
+
+              {!isSupabaseConfigured && <DemoNotice />}
 
               {apiError && (
                 <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 rounded-lg">

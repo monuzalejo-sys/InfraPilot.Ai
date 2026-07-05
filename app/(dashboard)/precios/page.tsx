@@ -8,6 +8,8 @@ import {
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
+import { isSupabaseConfigured } from "@/lib/supabase/client"
+import { DemoNotice } from "@/components/demo-notice"
 
 type Category = "material" | "labor" | "equipment"
 
@@ -39,6 +41,7 @@ export default function PreciosPage() {
   const [saving, setSaving]         = useState(false)
   const [importing, setImporting]   = useState(false)
   const [importMsg, setImportMsg]   = useState<string | null>(null)
+  const [fetchError, setFetchError] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
@@ -47,7 +50,7 @@ export default function PreciosPage() {
     if (catFilter !== "all") params.set("category", catFilter)
     if (search)              params.set("q", search)
     const res = await fetch(`/api/prices?${params}`)
-    if (res.ok) { const { items } = await res.json(); setItems(items ?? []) }
+    if (res.ok) { const { items } = await res.json(); setItems(items ?? []) } else { setFetchError(true) }
     setLoading(false)
   }, [catFilter, search])
 
@@ -104,6 +107,8 @@ export default function PreciosPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
+      {(!isSupabaseConfigured || fetchError) && <DemoNotice />}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

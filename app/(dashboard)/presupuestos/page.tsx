@@ -14,6 +14,8 @@ import { exportPresupuestoExcel } from "@/lib/excel-export"
 import { formatCurrency, timeAgo, taxLabel, defaultTaxRate } from "@/lib/utils"
 import type { GeneratedBudget } from "@/types"
 import Link from "next/link"
+import { isSupabaseConfigured } from "@/lib/supabase/client"
+import { DemoNotice } from "@/components/demo-notice"
 
 interface BudgetSummary {
   id: string
@@ -49,6 +51,7 @@ export default function PresupuestosPage() {
   const [loading, setLoading]         = useState(true)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [fetchError, setFetchError] = useState(false)
 
   const loadList = useCallback(async () => {
     setLoading(true)
@@ -56,6 +59,8 @@ export default function PresupuestosPage() {
     if (res.ok) {
       const { budgets } = await res.json()
       setBudgets(budgets ?? [])
+    } else {
+      setFetchError(true)
     }
     setLoading(false)
   }, [])
@@ -87,6 +92,8 @@ export default function PresupuestosPage() {
   if (!selected) {
     return (
       <div className="p-8 max-w-5xl mx-auto space-y-6">
+        {(!isSupabaseConfigured || fetchError) && <DemoNotice />}
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Presupuestos</h1>

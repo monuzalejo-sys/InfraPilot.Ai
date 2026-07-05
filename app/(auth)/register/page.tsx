@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import { Building2, ArrowRight, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { createClient } from "@/lib/supabase/client"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
+import { DemoNotice } from "@/components/demo-notice"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -31,10 +32,12 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isSupabaseConfigured) return
     setLoading(true)
     setError(null)
 
     const supabase = createClient()
+    if (!supabase) { setLoading(false); return }
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -88,6 +91,10 @@ export default function RegisterPage() {
           <h2 className="text-2xl font-bold text-slate-900">Crear cuenta gratis</h2>
           <p className="text-slate-500 text-sm">Sin tarjeta de crédito</p>
         </div>
+
+        {!isSupabaseConfigured && (
+          <DemoNotice className="text-xs" />
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -144,7 +151,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <Button type="submit" className="w-full h-10 text-sm" disabled={loading}>
+          <Button type="submit" className="w-full h-10 text-sm" disabled={loading || !isSupabaseConfigured}>
             {loading ? (
               <span className="flex items-center gap-2">
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

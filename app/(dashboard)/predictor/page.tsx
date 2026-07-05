@@ -19,6 +19,8 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { formatCurrency } from "@/lib/utils"
 import { SCENARIO_META, ESCENARIOS, type EscenarioKey } from "@/lib/financial-model"
+import { isSupabaseConfigured } from "@/lib/supabase/client"
+import { DemoNotice } from "@/components/demo-notice"
 
 // ── Base investment (used to scale scenarios proportionally) ──────
 const BASE_INV = 15_932_621
@@ -102,6 +104,7 @@ export default function PredictorPage() {
   const [selected, setSelected]   = useState<BudgetOption | null>(null)
   const [showPicker, setShowPicker] = useState(false)
   const [loadingBudgets, setLoadingBudgets] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
 
   const loadBudgets = useCallback(async () => {
     const res = await fetch("/api/budgets")
@@ -109,6 +112,8 @@ export default function PredictorPage() {
       const { budgets } = await res.json()
       setBudgets(budgets ?? [])
       if (budgets?.length > 0) setSelected(budgets[0])
+    } else {
+      setFetchError(true)
     }
     setLoadingBudgets(false)
   }, [])
@@ -170,6 +175,7 @@ export default function PredictorPage() {
   if (!loadingBudgets && budgets.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6 text-center px-8">
+        {(!isSupabaseConfigured || fetchError) && <DemoNotice className="max-w-md" />}
         <div className="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center">
           <TrendingUp className="w-7 h-7 text-indigo-600" />
         </div>
@@ -191,6 +197,12 @@ export default function PredictorPage() {
 
   return (
     <div className="min-h-full bg-slate-50">
+
+      {(!isSupabaseConfigured || fetchError) && (
+        <div className="px-8 pt-4">
+          <DemoNotice />
+        </div>
+      )}
 
       {/* ── Header ── */}
       <div className="bg-white border-b border-slate-200 px-8 py-5">
