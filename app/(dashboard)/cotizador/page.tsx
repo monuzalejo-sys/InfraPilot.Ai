@@ -17,6 +17,7 @@ import { formatCurrency, taxLabel, defaultTaxRate } from "@/lib/utils"
 import type { GeneratedBudget, BudgetItem, ApuComponent, ProcessingStep } from "@/types"
 import { isSupabaseConfigured } from "@/lib/supabase/client"
 import { DemoNotice } from "@/components/demo-notice"
+import { MonoLabel } from "@/components/editorial"
 
 type Phase = "idle" | "processing" | "results"
 
@@ -32,9 +33,9 @@ const PROCESSING_STEPS: ProcessingStep[] = [
 ]
 
 const riskColors = {
-  HIGH:   { bg: "bg-rose-50",   border: "border-rose-200",   text: "text-rose-700",   badge: "danger"   as const, label: "Alto" },
-  MEDIUM: { bg: "bg-amber-50",  border: "border-amber-200",  text: "text-amber-700",  badge: "warning"  as const, label: "Medio" },
-  LOW:    { bg: "bg-slate-50",  border: "border-slate-200",  text: "text-slate-600",  badge: "default"  as const, label: "Bajo" },
+  HIGH:   { bg: "bg-[var(--warn)]/10",  border: "border-[var(--warn)]/30",  text: "text-[var(--warn)]",  badge: "danger"   as const, label: "Alto" },
+  MEDIUM: { bg: "bg-[var(--warn)]/5",   border: "border-[var(--warn)]/20",  text: "text-[var(--warn)]",  badge: "warning"  as const, label: "Medio" },
+  LOW:    { bg: "bg-[var(--hairline)]/40", border: "border-[var(--hairline)]", text: "text-[var(--muted)]", badge: "default"  as const, label: "Bajo" },
 }
 
 export default function CotizadorPage() {
@@ -172,22 +173,22 @@ export default function CotizadorPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-5 border-b border-slate-200 bg-white shrink-0">
+      <div className="flex items-center justify-between px-8 py-5 border-b border-[var(--hairline)] bg-[var(--card)] shrink-0">
         <div className="flex items-center gap-3">
           {phase !== "idle" && (
-            <button onClick={handleReset} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mr-1">
+            <button onClick={handleReset} className="flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors mr-1">
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg gradient-ai flex items-center justify-center">
+            <div className="w-8 h-8 rounded-[2px] bg-[var(--brass)] flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-base font-semibold text-slate-900">Cotizador IA</h1>
-              <p className="text-xs text-slate-500">
+              <h1 className="text-base font-semibold text-[var(--ink)]">Cotizador IA</h1>
+              <p className="text-xs text-[var(--muted)]">
                 {phase === "idle"       && "Describe tu obra en lenguaje natural"}
-                {phase === "processing" && "Analizando con Claude AI..."}
+                {phase === "processing" && "Analizando con IA..."}
                 {phase === "results"    && budget && `${budget.projectName} · ${totalPartidas} partidas · ${budget.confidence}% confianza`}
               </p>
             </div>
@@ -198,20 +199,20 @@ export default function CotizadorPage() {
           <div className="flex items-center gap-2">
             <Badge variant="ai">✦ IA {budget.confidence}%</Badge>
             <div className="relative">
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowExportMenu(!showExportMenu)}>
+              <Button variant="outline" size="sm" className="gap-2 rounded-[2px]" onClick={() => setShowExportMenu(!showExportMenu)}>
                 <Download className="w-4 h-4" />
                 Exportar
                 <ChevronDown className="w-3 h-3" />
               </Button>
               {showExportMenu && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-10 py-1">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--card)] border border-[var(--hairline)] rounded-[2px] shadow-lg z-10 py-1">
                   {["Excel (.xlsx)", "PDF profesional", "Formato OSCE"].map((opt) => (
                     <button
                       key={opt}
-                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => { setShowExportMenu(false); if (opt === "Excel (.xlsx)") exportPresupuestoExcel() }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-[var(--ink)] hover:bg-[var(--paper)] transition-colors"
+                      onClick={() => { setShowExportMenu(false); if (opt === "Excel (.xlsx)") exportPresupuestoExcel(budget) }}
                     >
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                      <FileSpreadsheet className="w-4 h-4 text-[var(--ok)]" />
                       {opt}
                     </button>
                   ))}
@@ -231,8 +232,9 @@ export default function CotizadorPage() {
           <div className="h-full flex items-start justify-center pt-12 px-6">
             <div className="w-full max-w-2xl space-y-6 animate-fade-in-up">
               <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900">Describe tu obra</h2>
-                <p className="text-slate-500">
+                <MonoLabel className="justify-center flex">Nuevo presupuesto</MonoLabel>
+                <h2 className="text-2xl font-bold text-[var(--ink)]">Describe tu obra</h2>
+                <p className="text-[var(--muted)]">
                   Escribe en lenguaje natural — la IA identificará tipo de obra, partidas, metrados y precios automáticamente.
                 </p>
               </div>
@@ -240,14 +242,14 @@ export default function CotizadorPage() {
               {!isSupabaseConfigured && <DemoNotice />}
 
               {apiError && (
-                <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 rounded-lg">
+                <div className="flex items-start gap-3 bg-[var(--warn)]/10 border border-[var(--warn)]/30 text-[var(--warn)] text-sm px-4 py-3 rounded-[2px]">
                   <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                   <div className="flex-1">{apiError}</div>
                   <button onClick={() => setApiError(null)}><X className="w-4 h-4" /></button>
                 </div>
               )}
 
-              <Card className="shadow-md border-slate-200">
+              <Card className="editorial-card">
                 <CardContent className="pt-5 space-y-4">
                   {/* Project type selector */}
                   <div className="grid grid-cols-3 gap-2">
@@ -259,15 +261,15 @@ export default function CotizadorPage() {
                       <button
                         key={value}
                         onClick={() => setProjectType(value)}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-all ${
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-[2px] border text-center transition-all ${
                           projectType === value
-                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                            : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                            ? "border-[var(--brass)] bg-[var(--brass)]/10 text-[var(--ink)]"
+                            : "border-[var(--hairline)] text-[var(--muted)] hover:border-[var(--brass)]/50 hover:bg-[var(--paper)]"
                         }`}
                       >
-                        <Icon className={`w-5 h-5 ${projectType === value ? "text-indigo-600" : "text-slate-400"}`} />
+                        <Icon className={`w-5 h-5 ${projectType === value ? "text-[var(--brass)]" : "text-[var(--muted)]"}`} />
                         <span className="text-xs font-semibold">{label}</span>
-                        <span className="text-[10px] leading-tight text-slate-400">{desc}</span>
+                        <span className="text-[10px] leading-tight text-[var(--muted)]">{desc}</span>
                       </button>
                     ))}
                   </div>
@@ -283,10 +285,10 @@ export default function CotizadorPage() {
                           ? "Ejemplo: Construcción de vía terciaria en concreto rígido, longitud 2.5 km, ancho 6 m, municipio de Totoró, Cauca. Incluye adecuación de subrasante, subbase granular 20cm, base granular 15cm y placa de concreto 21 MPa e=18cm..."
                           : "Ejemplo: Construcción de edificio de oficinas corporativas de 8 pisos en Miraflores, Lima. Área 800 m2 por piso. Estructura aporticada f'c=280 kg/cm², fachada vidrio spider, 3 ascensores, 2 sótanos..."
                       }
-                      className="min-h-[180px] text-sm leading-relaxed border-slate-200 focus-visible:ring-indigo-500"
+                      className="min-h-[180px] text-sm leading-relaxed border-[var(--hairline)] rounded-[2px] focus-visible:ring-[var(--brass)]"
                       maxLength={2000}
                     />
-                    <span className="absolute bottom-3 right-3 text-xs text-slate-300">
+                    <span className="absolute bottom-3 right-3 text-xs text-[var(--muted)]">
                       {description.length}/2000
                     </span>
                   </div>
@@ -294,13 +296,13 @@ export default function CotizadorPage() {
                   <Separator />
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                    <label className="text-xs font-medium text-[var(--muted)] flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5" /> Ciudad / Región
                     </label>
                     <select
                       value={region}
                       onChange={(e) => setRegion(e.target.value)}
-                      className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full h-9 rounded-[2px] border border-[var(--hairline)] bg-[var(--card)] px-3 text-sm text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--brass)]"
                     >
                       <option>Bogotá, Colombia</option>
                       <option>Medellín, Colombia</option>
@@ -320,14 +322,14 @@ export default function CotizadorPage() {
                   <Button
                     variant="ai"
                     size="lg"
-                    className="w-full gap-2.5 text-base"
+                    className="w-full gap-2.5 text-base rounded-[2px] bg-[var(--brass)] hover:bg-[var(--brass)]/90 text-white"
                     disabled={description.trim().length < 30}
                     onClick={handleAnalyze}
                   >
                     <Sparkles className="w-5 h-5" />
                     Analizar con IA
                   </Button>
-                  <p className="text-center text-xs text-slate-400">
+                  <p className="text-center text-xs text-[var(--muted)]">
                     {projectType === "acueducto"
                       ? `✦ Precios INVIAS · Operadores de servicios públicos · COP ${new Date().getFullYear()}`
                       : projectType === "vias"
@@ -345,14 +347,14 @@ export default function CotizadorPage() {
           <div className="h-full flex items-center justify-center px-6">
             <div className="w-full max-w-lg space-y-6 animate-fade-in">
               <div className="text-center space-y-1">
-                <div className="flex items-center justify-center w-12 h-12 rounded-2xl gradient-ai mx-auto mb-3 shadow-lg">
+                <div className="flex items-center justify-center w-12 h-12 rounded-[2px] bg-[var(--brass)] mx-auto mb-3">
                   <Sparkles className="w-6 h-6 text-white animate-pulse" />
                 </div>
-                <h2 className="text-xl font-bold text-slate-900">InfraPilot IA está analizando</h2>
-                <p className="text-slate-500 text-sm">Generando presupuesto con Claude AI...</p>
+                <h2 className="text-xl font-bold text-[var(--ink)]">InfraPilot IA está analizando</h2>
+                <p className="text-[var(--muted)] text-sm">Generando presupuesto con IA...</p>
               </div>
 
-              <Card className="shadow-md">
+              <Card className="editorial-card">
                 <CardContent className="pt-5 space-y-3">
                   {steps.map((step) => (
                     <div
@@ -361,18 +363,18 @@ export default function CotizadorPage() {
                     >
                       <div className="mt-0.5 shrink-0">
                         {step.status === "completed" ? (
-                          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                            <Check className="w-3 h-3 text-emerald-600" />
+                          <div className="w-5 h-5 rounded-full bg-[var(--ok)]/15 flex items-center justify-center">
+                            <Check className="w-3 h-3 text-[var(--ok)]" />
                           </div>
                         ) : step.status === "active" ? (
-                          <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <Loader2 className="w-3 h-3 text-indigo-600 animate-spin" />
+                          <div className="w-5 h-5 rounded-full bg-[var(--brass)]/15 flex items-center justify-center">
+                            <Loader2 className="w-3 h-3 text-[var(--brass)] animate-spin" />
                           </div>
                         ) : (
-                          <div className="w-5 h-5 rounded-full border-2 border-slate-200" />
+                          <div className="w-5 h-5 rounded-full border-2 border-[var(--hairline)]" />
                         )}
                       </div>
-                      <p className={`text-sm font-medium ${step.status !== "pending" ? "text-slate-800" : "text-slate-400"}`}>
+                      <p className={`text-sm font-medium ${step.status !== "pending" ? "text-[var(--ink)]" : "text-[var(--muted)]"}`}>
                         {step.label}
                       </p>
                     </div>
@@ -381,17 +383,17 @@ export default function CotizadorPage() {
               </Card>
 
               <div className="space-y-2">
-                <div className="flex justify-between text-xs text-slate-500">
+                <div className="flex justify-between text-xs text-[var(--muted)]">
                   <span>Progreso</span>
                   <span>{progress}%</span>
                 </div>
-                <Progress value={progress} className="h-2" indicatorClassName="bg-gradient-to-r from-violet-500 to-indigo-500" />
+                <Progress value={progress} className="h-2" indicatorClassName="bg-[var(--brass)]" />
               </div>
 
-              <div className="bg-violet-50 border border-violet-100 rounded-lg px-4 py-3">
-                <p className="text-xs text-violet-600 leading-relaxed">
-                  <span className="font-semibold">💡 </span>
-                  Claude AI está generando un presupuesto completo con APUs detallados, análisis de riesgos y proyección financiera. Esto puede tomar 20-40 segundos.
+              <div className="bg-[var(--brass)]/5 border border-[var(--brass)]/20 rounded-[2px] px-4 py-3">
+                <p className="text-xs text-[var(--brass)] leading-relaxed">
+                  <span className="font-semibold">✦ </span>
+                  La IA está generando un presupuesto completo con APUs detallados, análisis de riesgos y proyección financiera. Esto puede tomar 20-40 segundos.
                 </p>
               </div>
             </div>
@@ -402,11 +404,9 @@ export default function CotizadorPage() {
         {phase === "results" && budget && (
           <div className="h-full flex overflow-hidden animate-fade-in">
             {/* Left: Sections tree */}
-            <div className="w-64 shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
-              <div className="p-3 border-b border-slate-100">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  {totalPartidas} partidas · {budget.sections.length} secciones
-                </p>
+            <div className="w-64 shrink-0 border-r border-[var(--hairline)] bg-[var(--card)] overflow-y-auto">
+              <div className="p-3 border-b border-[var(--hairline)]">
+                <MonoLabel>{totalPartidas} partidas · {budget.sections.length} secciones</MonoLabel>
               </div>
               <div className="py-1">
                 {budget.sections.map((section) => {
@@ -416,43 +416,43 @@ export default function CotizadorPage() {
                     <div key={section.id}>
                       <button
                         onClick={() => { toggleSection(section.id); setActiveSection(section.id) }}
-                        className={`flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-slate-50 transition-colors ${isActive ? "bg-indigo-50" : ""}`}
+                        className={`flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-[var(--paper)] transition-colors ${isActive ? "bg-[var(--brass)]/10" : ""}`}
                       >
                         <div className="shrink-0">
                           {isExpanded
-                            ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                            : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                            ? <ChevronDown className="w-3.5 h-3.5 text-[var(--muted)]" />
+                            : <ChevronRight className="w-3.5 h-3.5 text-[var(--muted)]" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-mono text-slate-400">{section.code}</span>
-                            <span className={`text-xs font-medium truncate ${isActive ? "text-indigo-700" : "text-slate-700"}`}>
+                            <span className="text-xs font-mono text-[var(--muted)]">{section.code}</span>
+                            <span className={`text-xs font-medium truncate ${isActive ? "text-[var(--brass)]" : "text-[var(--ink)]"}`}>
                               {section.name}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-400 mt-0.5">{formatCurrency(section.subtotal)}</p>
+                          <p className="text-[11px] text-[var(--muted)] mt-0.5">{formatCurrency(section.subtotal)}</p>
                         </div>
                       </button>
 
                       {isExpanded && (
-                        <div className="bg-slate-50 border-b border-slate-100">
+                        <div className="bg-[var(--paper)] border-b border-[var(--hairline)]">
                           {section.items.map((item) => (
                             <button
                               key={item.id}
                               onClick={() => setSelectedItem(item)}
-                              className={`flex items-center gap-2 w-full px-4 py-2 text-left hover:bg-slate-100 transition-colors border-l-2 ${
-                                selectedItem?.id === item.id ? "border-indigo-500 bg-indigo-50" : "border-transparent"
+                              className={`flex items-center gap-2 w-full px-4 py-2 text-left hover:bg-[var(--hairline)]/30 transition-colors border-l-2 ${
+                                selectedItem?.id === item.id ? "border-[var(--brass)] bg-[var(--brass)]/10" : "border-transparent"
                               }`}
                             >
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1">
-                                  <span className="text-[10px] font-mono text-slate-400">{item.code}</span>
-                                  {item.isAiGenerated && <span className="text-[9px] text-violet-500 font-bold">✦</span>}
+                                  <span className="text-[10px] font-mono text-[var(--muted)]">{item.code}</span>
+                                  {item.isAiGenerated && <span className="text-[9px] text-[var(--brass)] font-bold">✦</span>}
                                 </div>
-                                <p className={`text-xs truncate ${selectedItem?.id === item.id ? "text-indigo-700 font-medium" : "text-slate-600"}`}>
+                                <p className={`text-xs truncate ${selectedItem?.id === item.id ? "text-[var(--brass)] font-medium" : "text-[var(--ink)]"}`}>
                                   {item.name}
                                 </p>
-                                <p className="text-[11px] text-slate-400 font-mono">
+                                <p className="text-[11px] text-[var(--muted)] font-mono">
                                   {item.unit} · {formatCurrency(item.unitPrice)}/{item.unit}
                                 </p>
                               </div>
@@ -467,24 +467,24 @@ export default function CotizadorPage() {
             </div>
 
             {/* Center: APU detail */}
-            <div className="flex-1 overflow-y-auto bg-white border-r border-slate-200">
+            <div className="flex-1 overflow-y-auto bg-[var(--card)] border-r border-[var(--hairline)]">
               {selectedItem && apu ? (
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-mono text-slate-400">{selectedItem.code}</span>
+                        <span className="text-xs font-mono text-[var(--muted)]">{selectedItem.code}</span>
                         {selectedItem.isAiGenerated && (
                           <Badge variant="ai">✦ IA · {Math.round((selectedItem.confidence ?? 0.9) * 100)}%</Badge>
                         )}
                       </div>
-                      <h3 className="text-base font-semibold text-slate-900">{selectedItem.name}</h3>
-                      <p className="text-sm text-slate-500 mt-0.5">
-                        Unidad: <span className="font-medium text-slate-700">{selectedItem.unit}</span>
-                        {" · "}Metrado: <span className="font-medium text-slate-700">{selectedItem.quantity.toLocaleString()} {selectedItem.unit}</span>
+                      <h3 className="text-base font-semibold text-[var(--ink)]">{selectedItem.name}</h3>
+                      <p className="text-sm text-[var(--muted)] mt-0.5">
+                        Unidad: <span className="font-medium text-[var(--ink)]">{selectedItem.unit}</span>
+                        {" · "}Metrado: <span className="font-medium text-[var(--ink)]">{selectedItem.quantity.toLocaleString()} {selectedItem.unit}</span>
                       </p>
                     </div>
-                    <button className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors">
+                    <button className="flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--brass)] transition-colors">
                       <RefreshCw className="w-3.5 h-3.5" />
                       Regenerar
                     </button>
@@ -501,12 +501,12 @@ export default function CotizadorPage() {
                       const g = groups[type]
                       return (
                         <div key={type}>
-                          <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{g.label}</span>
-                            <span className="text-xs font-semibold text-slate-700">Subtotal: {formatCurrency(g.cost)}</span>
+                          <div className="flex items-center justify-between py-2 border-b border-[var(--hairline)]">
+                            <MonoLabel>{g.label}</MonoLabel>
+                            <span className="text-xs font-semibold text-[var(--ink)]">Subtotal: {formatCurrency(g.cost)}</span>
                           </div>
                           <div className="mt-1">
-                            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 px-1 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 px-1 py-1.5 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
                               <span>Descripción</span>
                               <span>Und.</span>
                               <span className="text-right">Cantidad</span>
@@ -514,12 +514,12 @@ export default function CotizadorPage() {
                               <span className="text-right">Total</span>
                             </div>
                             {g.components.map((comp: ApuComponent, i: number) => (
-                              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 px-1 py-1.5 hover:bg-slate-50 rounded transition-colors">
-                                <span className="text-xs text-slate-700 truncate">{comp.description}</span>
-                                <span className="text-xs text-slate-500 font-mono">{comp.unit}</span>
-                                <span className="text-xs text-slate-700 font-mono text-right">{comp.quantity.toFixed(3)}</span>
-                                <span className="text-xs text-slate-700 font-mono text-right">{comp.unitPrice.toFixed(2)}</span>
-                                <span className="text-xs font-medium text-slate-800 font-mono text-right">{comp.totalPrice.toFixed(2)}</span>
+                              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 px-1 py-1.5 hover:bg-[var(--paper)] rounded-[2px] transition-colors">
+                                <span className="text-xs text-[var(--ink)] truncate">{comp.description}</span>
+                                <span className="text-xs text-[var(--muted)] font-mono">{comp.unit}</span>
+                                <span className="text-xs text-[var(--ink)] font-mono text-right">{comp.quantity.toFixed(3)}</span>
+                                <span className="text-xs text-[var(--ink)] font-mono text-right">{comp.unitPrice.toFixed(2)}</span>
+                                <span className="text-xs font-medium text-[var(--ink)] font-mono text-right">{comp.totalPrice.toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
@@ -527,13 +527,13 @@ export default function CotizadorPage() {
                       )
                     })}
 
-                    <div className="flex items-center justify-between py-3 border-t-2 border-slate-900 bg-slate-50 rounded-lg px-3">
-                      <span className="text-sm font-bold text-slate-900">PRECIO UNITARIO TOTAL</span>
-                      <span className="text-lg font-bold text-slate-900 font-mono">
+                    <div className="flex items-center justify-between py-3 border-t-2 border-[var(--ink)] bg-[var(--paper)] rounded-[2px] px-3">
+                      <span className="text-sm font-bold text-[var(--ink)]">PRECIO UNITARIO TOTAL</span>
+                      <span className="text-lg font-bold text-[var(--ink)] font-mono">
                         {formatCurrency(apu.totalCost)} / {apu.unit}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                    <p className="text-xs text-[var(--muted)] flex items-center gap-1.5">
                       <Info className="w-3.5 h-3.5" />
                       Precios vigentes: {apu.priceDate} · Fuente: {apu.source}
                     </p>
@@ -541,26 +541,26 @@ export default function CotizadorPage() {
 
                   {/* Risks */}
                   <div className="mt-8 space-y-3">
-                    <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <h4 className="text-sm font-semibold text-[var(--ink)] flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-[var(--warn)]" />
                       Análisis de riesgos · {budget.risks.length} factores identificados
                     </h4>
                     {budget.risks.map((risk, i) => {
                       const rc = riskColors[risk.level]
                       return (
-                        <div key={i} className={`rounded-lg border p-4 ${rc.bg} ${rc.border}`}>
+                        <div key={i} className={`rounded-[2px] border p-4 ${rc.bg} ${rc.border}`}>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <p className={`text-sm font-semibold ${rc.text}`}>{risk.title}</p>
                             <Badge variant={rc.badge} className="shrink-0">{rc.label}</Badge>
                           </div>
-                          <p className="text-xs text-slate-600 leading-relaxed mb-2">{risk.description}</p>
-                          <div className="flex items-center gap-4 text-xs text-slate-500">
+                          <p className="text-xs text-[var(--muted)] leading-relaxed mb-2">{risk.description}</p>
+                          <div className="flex items-center gap-4 text-xs text-[var(--muted)]">
                             <span>Prob: <strong>{risk.probability}</strong></span>
                             <span>Impacto: <strong>{risk.impact}</strong></span>
                           </div>
-                          <div className="mt-2 pt-2 border-t border-slate-200/60">
-                            <p className="text-xs text-slate-600">
-                              <span className="font-semibold text-violet-700">✦ Recomendación:</span>{" "}
+                          <div className="mt-2 pt-2 border-t border-[var(--hairline)]">
+                            <p className="text-xs text-[var(--muted)]">
+                              <span className="font-semibold text-[var(--brass)]">✦ Recomendación:</span>{" "}
                               {risk.recommendation}
                             </p>
                           </div>
@@ -571,20 +571,20 @@ export default function CotizadorPage() {
                 </div>
               ) : (
                 <div className="h-full flex items-center justify-center">
-                  <p className="text-sm text-slate-400">Selecciona una partida para ver su APU</p>
+                  <p className="text-sm text-[var(--muted)]">Selecciona una partida para ver su APU</p>
                 </div>
               )}
             </div>
 
             {/* Right: Financial summary */}
-            <div className="w-72 shrink-0 bg-white overflow-y-auto">
+            <div className="w-72 shrink-0 bg-[var(--card)] overflow-y-auto">
               <div className="p-5 space-y-5 sticky top-0">
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Resumen financiero</p>
+                  <MonoLabel className="mb-3">Resumen financiero</MonoLabel>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600">Costo directo</span>
-                      <span className="text-sm font-semibold text-slate-900 font-mono">{formatCurrency(baseCost)}</span>
+                      <span className="text-sm text-[var(--muted)]">Costo directo</span>
+                      <span className="text-sm font-semibold text-[var(--ink)] font-mono">{formatCurrency(baseCost)}</span>
                     </div>
 
                     <div className="space-y-1.5">
@@ -594,45 +594,45 @@ export default function CotizadorPage() {
                       ].map(({ label, value, pct, setter }) => (
                         <div key={label} className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-slate-500">{label}</span>
+                            <span className="text-sm text-[var(--muted)]">{label}</span>
                             <input
                               type="number"
                               value={pct}
                               onChange={(e) => setter(Number(e.target.value))}
-                              className="w-10 h-5 text-xs text-center border border-slate-200 rounded bg-slate-50 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                              className="w-10 h-5 text-xs text-center border border-[var(--hairline)] rounded-[2px] bg-[var(--paper)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] font-mono"
                               min={0} max={50}
                             />
-                            <span className="text-xs text-slate-400">%</span>
+                            <span className="text-xs text-[var(--muted)]">%</span>
                           </div>
-                          <span className="text-sm text-slate-600 font-mono">{formatCurrency(value)}</span>
+                          <span className="text-sm text-[var(--muted)] font-mono">{formatCurrency(value)}</span>
                         </div>
                       ))}
 
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-500">Imprevistos (5%)</span>
-                        <span className="text-sm text-slate-600 font-mono">{formatCurrency(contingencyAmt)}</span>
+                        <span className="text-sm text-[var(--muted)]">Imprevistos (5%)</span>
+                        <span className="text-sm text-[var(--muted)] font-mono">{formatCurrency(contingencyAmt)}</span>
                       </div>
                     </div>
 
                     <Separator />
 
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600">Subtotal</span>
-                      <span className="text-sm font-semibold text-slate-800 font-mono">{formatCurrency(subtotal)}</span>
+                      <span className="text-sm text-[var(--muted)]">Subtotal</span>
+                      <span className="text-sm font-semibold text-[var(--ink)] font-mono">{formatCurrency(subtotal)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-500">{taxLabel(budget?.currency)} {Math.round(taxRate * 100)}%</span>
-                      <span className="text-sm text-slate-600 font-mono">{formatCurrency(taxAmount)}</span>
+                      <span className="text-sm text-[var(--muted)]">{taxLabel(budget?.currency)} {Math.round(taxRate * 100)}%</span>
+                      <span className="text-sm text-[var(--muted)] font-mono">{formatCurrency(taxAmount)}</span>
                     </div>
 
-                    <div className="border-t-2 border-slate-900 pt-3 mt-1">
+                    <div className="border-t-2 border-[var(--ink)] pt-3 mt-1">
                       <div className="flex items-start justify-between">
-                        <span className="text-sm font-bold text-slate-900">TOTAL</span>
+                        <span className="text-sm font-bold text-[var(--ink)]">TOTAL</span>
                         <div className="text-right">
-                          <div className="text-xl font-bold text-slate-900 font-mono leading-tight">
+                          <div className="text-xl font-bold text-[var(--ink)] font-mono leading-tight">
                             {formatCurrency(total)}
                           </div>
-                          <div className="text-xs text-emerald-600 font-medium mt-0.5">
+                          <div className="text-xs text-[var(--ok)] font-medium mt-0.5">
                             ✓ {budget.currency} · {budget.confidence}% confianza IA
                           </div>
                         </div>
@@ -644,11 +644,15 @@ export default function CotizadorPage() {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Button variant="ai" className="w-full gap-2 text-sm" onClick={exportPresupuestoExcel}>
+                  <Button
+                    variant="ai"
+                    className="w-full gap-2 text-sm rounded-[2px] bg-[var(--brass)] hover:bg-[var(--brass)]/90 text-white"
+                    onClick={() => exportPresupuestoExcel(budget)}
+                  >
                     <Download className="w-4 h-4" />
                     Exportar a Excel
                   </Button>
-                  <Button variant="outline" className="w-full gap-2 text-sm">
+                  <Button variant="outline" className="w-full gap-2 text-sm rounded-[2px]">
                     <TrendingUp className="w-4 h-4" />
                     Ver proyección financiera
                   </Button>
@@ -656,26 +660,26 @@ export default function CotizadorPage() {
 
                 <Separator />
 
-                <div className="space-y-2 text-xs text-slate-400">
+                <div className="space-y-2 text-xs text-[var(--muted)]">
                   <div className="flex items-center justify-between">
                     <span>Proyecto</span>
-                    <span className="text-slate-600 font-medium">{budget.projectName}</span>
+                    <span className="text-[var(--ink)] font-medium">{budget.projectName}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Ubicación</span>
-                    <span className="text-slate-600">{budget.location}</span>
+                    <span className="text-[var(--ink)]">{budget.location}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Moneda</span>
-                    <span className="text-slate-600">{budget.currency}</span>
+                    <span className="text-[var(--ink)]">{budget.currency}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Partidas totales</span>
-                    <span className="text-slate-600">{totalPartidas}</span>
+                    <span className="text-[var(--ink)]">{totalPartidas}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Confianza IA</span>
-                    <span className="text-emerald-600 font-semibold">{budget.confidence}%</span>
+                    <span className="text-[var(--ok)] font-semibold">{budget.confidence}%</span>
                   </div>
                 </div>
               </div>

@@ -5,12 +5,10 @@ import {
   Plus, Trash2, Edit2, Calculator,
   Package, HardHat, Wrench, Search, Check, X, ArrowLeft,
 } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { formatCurrency, timeAgo } from "@/lib/utils"
 import { isSupabaseConfigured } from "@/lib/supabase/client"
 import { DemoNotice } from "@/components/demo-notice"
+import { EditorialCard, MonoLabel } from "@/components/editorial"
 
 type Category = "material" | "labor" | "equipment"
 
@@ -44,10 +42,10 @@ interface APU {
   apu_components: Component[]
 }
 
-const CAT_CONFIG: Record<Category, { label: string; color: string; bg: string; border: string; icon: React.ElementType }> = {
-  material:  { label: "Material",     color: "text-indigo-700",  bg: "bg-indigo-50",  border: "border-indigo-200", icon: Package },
-  labor:     { label: "Mano de Obra", color: "text-violet-700",  bg: "bg-violet-50",  border: "border-violet-200", icon: HardHat },
-  equipment: { label: "Equipo",       color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200",icon: Wrench  },
+const CAT_CONFIG: Record<Category, { label: string; icon: React.ElementType }> = {
+  material:  { label: "Material",     icon: Package },
+  labor:     { label: "Mano de Obra", icon: HardHat },
+  equipment: { label: "Equipo",       icon: Wrench  },
 }
 
 const CATS: Category[] = ["material", "labor", "equipment"]
@@ -138,27 +136,27 @@ function APUBuilder({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <button onClick={onCancel} className="text-slate-500 hover:text-slate-700 transition-colors">
+        <button onClick={onCancel} className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h2 className="text-lg font-bold text-slate-900">{initial ? "Editar APU" : "Nuevo APU"}</h2>
+        <h2 className="text-lg font-semibold text-[var(--ink)]">{initial ? "Editar APU" : "Nuevo APU"}</h2>
       </div>
 
       {/* APU Header */}
-      <Card className="p-5">
+      <EditorialCard>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <input value={code} onChange={e => setCode(e.target.value)}
-            placeholder="Código (ej: 01.01)" className="px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+            placeholder="Código (ej: 01.01)" className="px-3 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors" />
           <input value={description} onChange={e => setDesc(e.target.value)}
-            placeholder="Descripción de la actividad *" className="md:col-span-2 px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+            placeholder="Descripción de la actividad *" className="md:col-span-2 px-3 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors" />
           <input value={unit} onChange={e => setUnit(e.target.value)}
-            placeholder="Unidad (M3, ML, UND…) *" className="px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+            placeholder="Unidad (M3, ML, UND…) *" className="px-3 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors" />
         </div>
         {notes !== undefined && (
           <input value={notes} onChange={e => setNotes(e.target.value)}
-            placeholder="Notas adicionales (opcional)" className="mt-3 w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+            placeholder="Notas adicionales (opcional)" className="mt-3 w-full px-3 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors" />
         )}
-      </Card>
+      </EditorialCard>
 
       {/* Components by category */}
       {CATS.map((cat) => {
@@ -168,35 +166,35 @@ function APUBuilder({
         const subtotal = comps.reduce((s, c) => s + c.unit_price * c.quantity, 0)
 
         return (
-          <div key={cat} className={`border ${cfg.border} rounded-2xl overflow-hidden`}>
-            <div className={`${cfg.bg} px-5 py-3 flex items-center justify-between`}>
+          <div key={cat} className="border border-[var(--hairline)] rounded-[2px] overflow-hidden">
+            <div className="bg-[var(--card)] px-5 py-3 flex items-center justify-between border-b border-[var(--hairline)]">
               <div className="flex items-center gap-2">
-                <Icon className={`w-4 h-4 ${cfg.color}`} />
-                <span className={`text-sm font-bold uppercase tracking-wide ${cfg.color}`}>{cfg.label}</span>
-                <span className="text-xs text-slate-400">{comps.length} items</span>
+                <Icon className="w-4 h-4 text-[var(--muted)]" />
+                <MonoLabel>{cfg.label}</MonoLabel>
+                <span className="text-xs text-[var(--muted)]">{comps.length} items</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className={`text-sm font-bold font-mono ${cfg.color}`}>{formatCurrency(subtotal)}</span>
+                <span className="text-sm font-semibold font-mono text-[var(--ink)]">{formatCurrency(subtotal)}</span>
                 <div className="flex gap-1">
                   <button
                     onClick={() => { setPickerCat(cat); setAddingCat(cat); setShowPicker(true) }}
-                    className="text-xs px-2 py-1 rounded-lg bg-white/70 border border-current/20 hover:bg-white transition-colors flex items-center gap-1"
+                    className="text-xs px-2 py-1 rounded-[2px] border border-[var(--hairline)] hover:border-[var(--brass)] transition-colors flex items-center gap-1 text-[var(--muted)]"
                   >
-                    <Search className={`w-3 h-3 ${cfg.color}`} /> De mis precios
+                    <Search className="w-3 h-3" /> De mis precios
                   </button>
                   <button
                     onClick={() => addManual(cat)}
-                    className="text-xs px-2 py-1 rounded-lg bg-white/70 border border-current/20 hover:bg-white transition-colors flex items-center gap-1"
+                    className="text-xs px-2 py-1 rounded-[2px] border border-[var(--hairline)] hover:border-[var(--brass)] transition-colors flex items-center gap-1 text-[var(--muted)]"
                   >
-                    <Plus className={`w-3 h-3 ${cfg.color}`} /> Manual
+                    <Plus className="w-3 h-3" /> Manual
                   </button>
                 </div>
               </div>
             </div>
 
             {comps.length > 0 ? (
-              <div className="divide-y divide-slate-100">
-                <div className="grid grid-cols-[2fr_1fr_1fr_1fr_32px] gap-2 px-5 py-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="divide-y divide-[var(--hairline)]">
+                <div className="grid grid-cols-[2fr_1fr_1fr_1fr_32px] gap-2 px-5 py-2 mono-label">
                   <span>Descripción</span><span className="text-center">Und</span><span className="text-right">Precio Unit.</span><span className="text-right">Parcial</span><span></span>
                 </div>
                 {comps.map((c, idx) => {
@@ -204,20 +202,20 @@ function APUBuilder({
                   return (
                     <div key={idx} className="grid grid-cols-[2fr_1fr_1fr_1fr_32px] gap-2 px-5 py-2 items-center">
                       <input value={c.description} onChange={e => updateComp(globalIdx, "description", e.target.value)}
-                        className="text-sm text-slate-700 bg-transparent outline-none border-b border-transparent focus:border-indigo-300 transition-colors" />
+                        className="text-sm text-[var(--ink)] bg-transparent outline-none border-b border-transparent focus:border-[var(--brass)] transition-colors" />
                       <input value={c.unit} onChange={e => updateComp(globalIdx, "unit", e.target.value)}
-                        className="text-xs font-mono text-center text-slate-500 bg-transparent outline-none border-b border-transparent focus:border-indigo-300 transition-colors" />
+                        className="text-xs font-mono text-center text-[var(--muted)] bg-transparent outline-none border-b border-transparent focus:border-[var(--brass)] transition-colors" />
                       <div className="text-right flex items-center justify-end gap-1">
                         <input type="number" value={c.unit_price} onChange={e => updateComp(globalIdx, "unit_price", +e.target.value)}
-                          className="w-24 text-xs font-mono text-right text-slate-700 bg-transparent outline-none border-b border-transparent focus:border-indigo-300 transition-colors" />
-                        <span className="text-[10px] text-slate-400">× </span>
+                          className="w-24 text-xs font-mono text-right text-[var(--ink)] bg-transparent outline-none border-b border-transparent focus:border-[var(--brass)] transition-colors" />
+                        <span className="text-[10px] text-[var(--muted)]">× </span>
                         <input type="number" step="0.001" value={c.quantity} onChange={e => updateComp(globalIdx, "quantity", +e.target.value)}
-                          className="w-16 text-xs font-mono text-right text-slate-700 bg-transparent outline-none border-b border-transparent focus:border-indigo-300 transition-colors" />
+                          className="w-16 text-xs font-mono text-right text-[var(--ink)] bg-transparent outline-none border-b border-transparent focus:border-[var(--brass)] transition-colors" />
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-mono font-semibold text-slate-800">{formatCurrency(c.unit_price * c.quantity)}</span>
+                        <span className="text-sm font-mono font-semibold text-[var(--ink)]">{formatCurrency(c.unit_price * c.quantity)}</span>
                       </div>
-                      <button onClick={() => removeComp(globalIdx)} className="p-1 rounded hover:bg-rose-100 text-rose-400 transition-colors">
+                      <button onClick={() => removeComp(globalIdx)} className="p-1 rounded-[2px] hover:bg-[var(--warn)]/10 text-[var(--warn)] transition-colors">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -225,7 +223,7 @@ function APUBuilder({
                 })}
               </div>
             ) : (
-              <div className="px-5 py-4 text-xs text-slate-400 text-center">
+              <div className="px-5 py-4 text-xs text-[var(--muted)] text-center">
                 Sin items — usa los botones para agregar
               </div>
             )}
@@ -235,37 +233,37 @@ function APUBuilder({
 
       {/* Price picker modal */}
       {showPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowPicker(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className={`px-5 py-4 ${CAT_CONFIG[addingCat].bg} border-b border-slate-200 rounded-t-2xl`}>
-              <h3 className={`text-sm font-bold ${CAT_CONFIG[addingCat].color}`}>Seleccionar {CAT_CONFIG[addingCat].label}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--ink)]/40 p-4" onClick={() => setShowPicker(false)}>
+          <div className="bg-[var(--card)] rounded-[2px] shadow-2xl w-full max-w-lg max-h-[70vh] flex flex-col border border-[var(--hairline)]" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 bg-[var(--paper)] border-b border-[var(--hairline)]">
+              <h3 className="text-sm font-semibold text-[var(--ink)]">Seleccionar {CAT_CONFIG[addingCat].label}</h3>
               <div className="flex gap-2 mt-2">
                 {CATS.map(c => (
                   <button key={c} onClick={() => setPickerCat(c)}
-                    className={`text-xs px-2 py-1 rounded-lg font-medium transition-colors ${pickerCat === c ? "bg-white shadow text-slate-800" : "text-slate-500 hover:bg-white/50"}`}>
+                    className={`text-xs px-2 py-1 rounded-[2px] font-medium transition-colors ${pickerCat === c ? "bg-[var(--brass)] text-[var(--paper)]" : "text-[var(--muted)] hover:bg-[var(--card)] border border-[var(--hairline)]"}`}>
                     {CAT_CONFIG[c].label}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="px-4 py-3 border-b border-slate-100">
+            <div className="px-4 py-3 border-b border-[var(--hairline)]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
                 <input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)} autoFocus
-                  placeholder="Buscar…" className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+                  placeholder="Buscar…" className="w-full pl-9 pr-4 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)]" />
               </div>
             </div>
             <div className="flex-1 overflow-y-auto">
               {pickerFiltered.length === 0 ? (
-                <div className="py-8 text-center text-slate-400 text-sm">No hay items en esta categoría</div>
+                <div className="py-8 text-center text-[var(--muted)] text-sm">No hay items en esta categoría</div>
               ) : pickerFiltered.map(item => (
                 <button key={item.id} onClick={() => addComponent(item)}
-                  className="w-full flex items-center justify-between px-5 py-3 hover:bg-indigo-50 transition-colors text-left border-b border-slate-50">
+                  className="w-full flex items-center justify-between px-5 py-3 hover:bg-[var(--paper)] transition-colors text-left border-b border-[var(--hairline)]">
                   <div>
-                    <p className="text-sm font-medium text-slate-800">{item.description}</p>
-                    <p className="text-xs text-slate-400">{item.unit} · {item.code ?? ""}</p>
+                    <p className="text-sm font-medium text-[var(--ink)]">{item.description}</p>
+                    <p className="text-xs text-[var(--muted)]">{item.unit} · {item.code ?? ""}</p>
                   </div>
-                  <span className="text-sm font-mono font-bold text-indigo-600 shrink-0">{formatCurrency(item.unit_price)}</span>
+                  <span className="text-sm font-mono font-semibold text-[var(--brass)] shrink-0">{formatCurrency(item.unit_price)}</span>
                 </button>
               ))}
             </div>
@@ -274,38 +272,41 @@ function APUBuilder({
       )}
 
       {/* Total */}
-      <Card className="p-5">
+      <EditorialCard>
         <div className="space-y-2 text-sm">
           {CATS.map(cat => {
             const sub = components.filter(c => c.category === cat).reduce((s,c) => s + c.unit_price * c.quantity, 0)
             if (!sub) return null
             return (
-              <div key={cat} className="flex justify-between text-slate-500">
+              <div key={cat} className="flex justify-between text-[var(--muted)]">
                 <span>{CAT_CONFIG[cat].label}</span>
                 <span className="font-mono">{formatCurrency(sub)}</span>
               </div>
             )
           })}
           {components.some(c => c.category === "labor") && (
-            <div className="flex justify-between text-slate-400 text-xs">
+            <div className="flex justify-between text-[var(--muted)] text-xs">
               <span>Herramienta menor (5% M.O.) — se agrega automáticamente</span>
               <span className="font-mono">{formatCurrency(byTool)}</span>
             </div>
           )}
-          <Separator />
-          <div className="flex justify-between font-bold text-slate-900 text-base">
+          <div className="h-px bg-[var(--hairline)]" />
+          <div className="flex justify-between font-semibold text-[var(--ink)] text-base">
             <span>TOTAL COSTO DIRECTO / {unit || "UND"}</span>
             <span className="font-mono">{formatCurrency(total + (components.some(c => c.category === "labor") ? byTool : 0))}</span>
           </div>
         </div>
 
         <div className="flex gap-2 mt-5 justify-end">
-          <Button variant="outline" onClick={onCancel}>Cancelar</Button>
-          <Button variant="ai" onClick={save} disabled={saving || !description || !unit} className="gap-2">
+          <button onClick={onCancel} className="px-4 py-2 text-sm rounded-[2px] border border-[var(--hairline)] text-[var(--ink)] hover:bg-[var(--paper)] transition-colors">
+            Cancelar
+          </button>
+          <button onClick={save} disabled={saving || !description || !unit}
+            className="px-4 py-2 text-sm rounded-[2px] bg-[var(--brass)] text-[var(--paper)] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2">
             <Check className="w-4 h-4" />{saving ? "Guardando…" : "Guardar APU"}
-          </Button>
+          </button>
         </div>
-      </Card>
+      </EditorialCard>
     </div>
   )
 }
@@ -325,6 +326,13 @@ export default function APUsPage() {
     setLoading(false)
   }, [])
 
+  // Initial + refetch load. `load` sets state synchronously as its first
+  // statement (setLoading(true)) — react-hooks/set-state-in-effect flags any
+  // setState reachable synchronously from the effect body, including through
+  // a called function. There's no external-system subscription here (it's a
+  // plain fetch-on-mount), so there's no rewrite that removes the setState
+  // without changing the loading-flag UX; suppressed narrowly with rationale.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const del = async (id: string) => {
@@ -351,24 +359,30 @@ export default function APUsPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">APUs</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Análisis de Precios Unitarios — {apus.length} APUs guardados</p>
+          <h1 className="text-2xl font-semibold text-[var(--ink)]">APUs</h1>
+          <p className="text-[var(--muted)] text-sm mt-0.5">Análisis de Precios Unitarios — {apus.length} APUs guardados</p>
         </div>
-        <Button variant="ai" className="gap-2" onClick={() => { setEditApu(null); setView("builder") }}>
+        <button
+          onClick={() => { setEditApu(null); setView("builder") }}
+          className="px-4 py-2 text-sm rounded-[2px] bg-[var(--brass)] text-[var(--paper)] hover:opacity-90 transition-opacity flex items-center gap-2"
+        >
           <Plus className="w-4 h-4" />
           Nuevo APU
-        </Button>
+        </button>
       </div>
 
       {loading ? (
-        <div className="py-20 text-center text-slate-400 text-sm">Cargando…</div>
+        <div className="py-20 text-center text-[var(--muted)] text-sm">Cargando…</div>
       ) : apus.length === 0 ? (
         <div className="py-20 text-center space-y-4">
-          <Calculator className="w-10 h-10 text-slate-300 mx-auto" />
-          <p className="text-slate-500">Aún no hay APUs. Crea el primero con tu base de precios.</p>
-          <Button variant="ai" onClick={() => setView("builder")} className="gap-2">
+          <Calculator className="w-10 h-10 text-[var(--hairline)] mx-auto" />
+          <p className="text-[var(--muted)]">Aún no hay APUs. Crea el primero con tu base de precios.</p>
+          <button
+            onClick={() => setView("builder")}
+            className="px-4 py-2 text-sm rounded-[2px] bg-[var(--brass)] text-[var(--paper)] hover:opacity-90 transition-opacity inline-flex items-center gap-2"
+          >
             <Plus className="w-4 h-4" /> Crear APU
-          </Button>
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -377,39 +391,39 @@ export default function APUsPage() {
             const labSub = apu.apu_components?.filter(c => c.category === "labor").reduce((s,c) => s + c.unit_price * c.quantity, 0) ?? 0
             const eqSub  = apu.apu_components?.filter(c => c.category === "equipment").reduce((s,c) => s + c.unit_price * c.quantity, 0) ?? 0
             return (
-              <Card key={apu.id} className="p-5 hover:border-indigo-200 transition-colors">
+              <EditorialCard key={apu.id} className="hover:border-[var(--brass)] transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {apu.code && <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">{apu.code}</span>}
-                      <h3 className="font-semibold text-slate-900 truncate">{apu.description}</h3>
-                      <span className="text-xs text-slate-400 shrink-0">/ {apu.unit}</span>
+                      {apu.code && <span className="text-xs font-mono text-[var(--muted)] bg-[var(--paper)] px-2 py-0.5 rounded-[2px]">{apu.code}</span>}
+                      <h3 className="font-semibold text-[var(--ink)] truncate">{apu.description}</h3>
+                      <span className="text-xs text-[var(--muted)] shrink-0">/ {apu.unit}</span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-slate-400">
-                      {matSub > 0 && <span className="flex items-center gap-1"><Package className="w-3 h-3 text-indigo-400" /> Mat: {formatCurrency(matSub)}</span>}
-                      {labSub > 0 && <span className="flex items-center gap-1"><HardHat className="w-3 h-3 text-violet-400" /> M.O.: {formatCurrency(labSub)}</span>}
-                      {eqSub  > 0 && <span className="flex items-center gap-1"><Wrench  className="w-3 h-3 text-emerald-400" /> Eq: {formatCurrency(eqSub)}</span>}
+                    <div className="flex items-center gap-4 text-xs text-[var(--muted)]">
+                      {matSub > 0 && <span className="flex items-center gap-1"><Package className="w-3 h-3" /> Mat: {formatCurrency(matSub)}</span>}
+                      {labSub > 0 && <span className="flex items-center gap-1"><HardHat className="w-3 h-3" /> M.O.: {formatCurrency(labSub)}</span>}
+                      {eqSub  > 0 && <span className="flex items-center gap-1"><Wrench  className="w-3 h-3" /> Eq: {formatCurrency(eqSub)}</span>}
                       <span>{timeAgo(new Date(apu.created_at))}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 shrink-0 ml-4">
                     <div className="text-right">
-                      <p className="text-lg font-bold font-mono text-slate-900">{formatCurrency(apu.total_cost)}</p>
-                      <p className="text-xs text-slate-400">/ {apu.unit}</p>
+                      <p className="text-lg font-semibold font-mono text-[var(--ink)]">{formatCurrency(apu.total_cost)}</p>
+                      <p className="text-xs text-[var(--muted)]">/ {apu.unit}</p>
                     </div>
                     <div className="flex gap-1">
                       <button onClick={() => { setEditApu(apu); setView("builder") }}
-                        className="p-2 rounded-lg hover:bg-indigo-100 text-indigo-500 transition-colors">
+                        className="p-2 rounded-[2px] hover:bg-[var(--paper)] text-[var(--muted)] hover:text-[var(--brass)] transition-colors">
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button onClick={() => del(apu.id)}
-                        className="p-2 rounded-lg hover:bg-rose-100 text-rose-500 transition-colors">
+                        className="p-2 rounded-[2px] hover:bg-[var(--warn)]/10 text-[var(--muted)] hover:text-[var(--warn)] transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 </div>
-              </Card>
+              </EditorialCard>
             )
           })}
         </div>

@@ -1,20 +1,19 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import {
-  FolderOpen, Banknote, Gavel, ArrowUpRight, Sparkles,
+  FolderOpen, Banknote, Gavel, Sparkles,
   TrendingUp, ChevronRight,
-  Bot,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { formatCurrency, getGreeting, timeAgo } from "@/lib/utils"
 import { DemoNotice } from "@/components/demo-notice"
+import { EditorialCard, MonoLabel, Crosshair } from "@/components/editorial"
+import {
+  RadarPrecios, TimelineLicitaciones, ChipRiesgoIA,
+  type PriceRow, type TimelinePoint,
+} from "@/components/dashboard-widgets"
 
 interface Project {
   id: string
@@ -42,11 +41,11 @@ interface Budget {
 }
 
 const statusConfig: Record<string, { label: string; dot: string }> = {
-  APPROVED:    { label: "Aprobado",   dot: "bg-emerald-400" },
-  IN_PROGRESS: { label: "En revisión",dot: "bg-amber-400" },
-  DRAFT:       { label: "Borrador",   dot: "bg-slate-400" },
-  COMPLETED:   { label: "Completado", dot: "bg-emerald-400" },
-  ARCHIVED:    { label: "Archivado",  dot: "bg-slate-400" },
+  APPROVED:    { label: "Aprobado",    dot: "var(--ok)" },
+  IN_PROGRESS: { label: "En revisión", dot: "var(--brass)" },
+  DRAFT:       { label: "Borrador",    dot: "var(--muted)" },
+  COMPLETED:   { label: "Completado",  dot: "var(--ok)" },
+  ARCHIVED:    { label: "Archivado",   dot: "var(--muted)" },
 }
 
 const typeLabel: Record<string, string> = {
@@ -58,6 +57,24 @@ const typeLabel: Record<string, string> = {
   TOPOGRAFIA:  "Topografía",
   OTRO:        "Otro",
 }
+
+// Static reference readings for the price radar (editorial demo data — the
+// live feed lands in a later step; presentation is decoupled from source).
+const priceRows: PriceRow[] = [
+  { label: "Cemento · bolsa", value: "S/ 28.90", delta: 2.4 },
+  { label: "Acero fy=4200",   value: "S/ 4.35",  delta: -1.1 },
+  { label: "Concreto f'c210", value: "S/ 385",   delta: 0.8 },
+  { label: "Mano de obra",    value: "S/ 78/día", delta: 0 },
+]
+
+const licitacionTimeline: TimelinePoint[] = [
+  { label: "Feb", value: 3 },
+  { label: "Mar", value: 5 },
+  { label: "Abr", value: 4 },
+  { label: "May", value: 7 },
+  { label: "Jun", value: 6 },
+  { label: "Jul", value: 9 },
+]
 
 export default function DashboardPage() {
   const [user, setUser] = useState<{ email?: string; full_name?: string } | null>(null)
@@ -98,7 +115,12 @@ export default function DashboardPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  // Fetches on mount. Launching load() during render (lazy guard) fires its
+  // post-await setStates before mount under StrictMode; a mount effect is the
+  // correct place. No external store to restructure into — suppressed
+  // narrowly, same convention as the other data pages.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load() }, [load])
 
   const today = new Intl.DateTimeFormat("es-PE", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -107,267 +129,187 @@ export default function DashboardPage() {
   const totalBudget = projects.reduce((s, p) => s + (p.total_budget ?? 0), 0)
   const firstName = user?.full_name?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Usuario"
 
+  const stats = [
+    { icon: FolderOpen, label: "Proyectos activos", value: loading ? "—" : String(projects.length) },
+    { icon: Banknote,   label: "Presupuesto total", value: loading ? "—" : totalBudget > 0 ? `S/ ${(totalBudget / 1000000).toFixed(1)}M` : "S/ 0" },
+    { icon: Sparkles,   label: "Presupuestos IA",   value: loading ? "—" : String(recentBudgets.length) },
+    { icon: Gavel,      label: "Licitaciones",      value: "0" },
+  ]
+
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="mx-auto max-w-7xl space-y-8 p-6 sm:p-8">
       {(!isSupabaseConfigured || fetchError) && <DemoNotice />}
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <header className="flex flex-col gap-4 border-b border-[var(--hairline)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {getGreeting()}, {firstName} 👋
+          <MonoLabel>Tablero de control</MonoLabel>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--ink)]">
+            {getGreeting()}, {firstName}
           </h1>
-          <p className="text-slate-500 text-sm mt-0.5 capitalize">{today}</p>
+          <p className="mt-1 font-mono text-xs uppercase tracking-wide text-[var(--muted)]">{today}</p>
         </div>
-        <Link href="/cotizador">
-          <Button variant="ai" size="default" className="gap-2 shadow-md">
-            <Sparkles className="w-4 h-4" />
-            Nuevo presupuesto
-          </Button>
+        <Link
+          href="/cotizador"
+          className="inline-flex items-center gap-2 self-start rounded-sm bg-[var(--brass)] px-5 py-2.5 text-sm font-semibold text-[var(--paper)] transition-opacity hover:opacity-90 sm:self-auto"
+        >
+          <Sparkles className="h-4 w-4" />
+          Nuevo presupuesto
         </Link>
+      </header>
+
+      {/* Stats — big Inter numbers over mono labels */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map(({ icon: Icon, label, value }) => (
+          <EditorialCard key={label}>
+            <div className="flex items-start justify-between">
+              <Icon className="h-5 w-5 text-[var(--brass)]" />
+            </div>
+            <div className="mt-4 text-3xl font-bold tracking-tight tabular-nums text-[var(--ink)]">
+              {value}
+            </div>
+            <MonoLabel className="mt-1">{label}</MonoLabel>
+          </EditorialCard>
+        ))}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Card className="card-hover">
-          <CardContent className="pt-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-                <FolderOpen className="w-4.5 h-4.5 text-indigo-600" />
-              </div>
-              {projects.length > 0 && (
-                <span className="flex items-center gap-0.5 text-xs font-medium text-emerald-600">
-                  <ArrowUpRight className="w-3.5 h-3.5" /> activos
-                </span>
-              )}
-            </div>
-            <div className="text-3xl font-bold text-slate-900 tracking-tight">
-              {loading ? "—" : projects.length}
-            </div>
-            <div className="text-xs text-slate-500 mt-0.5 font-medium uppercase tracking-wide">
-              Proyectos activos
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-hover">
-          <CardContent className="pt-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <Banknote className="w-4.5 h-4.5 text-emerald-600" />
-              </div>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 tracking-tight">
-              {loading ? "—" : totalBudget > 0 ? `S/ ${(totalBudget / 1000000).toFixed(1)}M` : "S/ 0"}
-            </div>
-            <div className="text-xs text-slate-500 mt-0.5 font-medium uppercase tracking-wide">
-              Presupuesto total
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-hover">
-          <CardContent className="pt-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center">
-                <Sparkles className="w-4.5 h-4.5 text-violet-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-slate-900 tracking-tight">
-              {loading ? "—" : recentBudgets.length}
-            </div>
-            <div className="text-xs text-slate-500 mt-0.5 font-medium uppercase tracking-wide">
-              Presupuestos IA
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-hover">
-          <CardContent className="pt-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
-                <Gavel className="w-4.5 h-4.5 text-amber-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-slate-900 tracking-tight">0</div>
-            <div className="text-xs text-slate-500 mt-0.5 font-medium uppercase tracking-wide">
-              Licitaciones activas
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main content */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Recent budgets */}
-        <Card className="xl:col-span-2">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle>Presupuestos recientes</CardTitle>
-              <Link href="/presupuestos" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
-                Ver todos <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {loading ? (
-              <div className="py-8 text-center text-sm text-slate-400">Cargando...</div>
-            ) : recentBudgets.length === 0 ? (
-              <div className="py-10 text-center space-y-3">
-                <Sparkles className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="text-sm text-slate-500">Aún no hay presupuestos generados.</p>
-                <Link href="/cotizador">
-                  <Button variant="ai" size="sm" className="gap-2 mt-1">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Generar primer presupuesto
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {recentBudgets.slice(0, 6).map((b, i) => (
-                  <div key={b.id}>
-                    <div className="flex items-start gap-3 py-3 hover:bg-slate-50 rounded-lg px-2 -mx-2 transition-colors cursor-pointer group">
-                      <div className="mt-0.5 w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
-                        <Sparkles className="w-4 h-4 text-violet-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-medium text-slate-800">{b.project_name}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">{b.location}</p>
-                          </div>
-                          <span className="text-xs text-slate-400 whitespace-nowrap shrink-0">
-                            {timeAgo(new Date(b.created_at))}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          {b.total_amount && (
-                            <span className="text-xs font-mono text-slate-600">
-                              {formatCurrency(b.total_amount)}
-                            </span>
-                          )}
-                          {b.confidence && (
-                            <>
-                              <span className="text-slate-300">·</span>
-                              <Badge variant="ai">✦ IA {b.confidence}%</Badge>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {i < Math.min(recentBudgets.length, 6) - 1 && <Separator />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Right column */}
+      {/* Widgets row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <RadarPrecios rows={priceRows} updatedLabel="Ref · hoy" />
+        <TimelineLicitaciones points={licitacionTimeline} caption="6 meses" />
         <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Acciones rápidas</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-2">
-              <Link href="/cotizador">
-                <Button variant="ai" className="w-full justify-start gap-2.5 h-9">
-                  <Sparkles className="w-4 h-4" />
-                  Cotizar obra con IA
-                </Button>
+          <ChipRiesgoIA message="Sobrecosto en cimentación proyectado: el precio del acero fy=4200 supera el margen del presupuesto INF-024 en 6.2%. Revisa la partida 02.01." />
+          <EditorialCard title="Acciones rápidas">
+            <div className="space-y-2">
+              <Link
+                href="/cotizador"
+                className="flex items-center gap-2.5 rounded-sm bg-[var(--brass)] px-3 py-2 text-sm font-medium text-[var(--paper)] transition-opacity hover:opacity-90"
+              >
+                <Sparkles className="h-4 w-4" />
+                Cotizar obra con IA
               </Link>
-              <Link href="/predictor">
-                <Button variant="outline" className="w-full justify-start gap-2.5 h-9 text-slate-600">
-                  <TrendingUp className="w-4 h-4" />
-                  Predictor financiero
-                </Button>
+              <Link
+                href="/predictor"
+                className="flex items-center gap-2.5 rounded-sm border border-[var(--hairline)] px-3 py-2 text-sm font-medium text-[var(--ink)] transition-colors hover:border-[var(--brass)]"
+              >
+                <TrendingUp className="h-4 w-4 text-[var(--muted)]" />
+                Predictor financiero
               </Link>
-              <Link href="/licitaciones">
-                <Button variant="outline" className="w-full justify-start gap-2.5 h-9 text-slate-600">
-                  <Gavel className="w-4 h-4" />
-                  Ver licitaciones
-                </Button>
+              <Link
+                href="/licitaciones"
+                className="flex items-center gap-2.5 rounded-sm border border-[var(--hairline)] px-3 py-2 text-sm font-medium text-[var(--ink)] transition-colors hover:border-[var(--brass)]"
+              >
+                <Gavel className="h-4 w-4 text-[var(--muted)]" />
+                Ver licitaciones
               </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="border-violet-200 bg-gradient-to-br from-violet-50 to-indigo-50">
-            <CardContent className="pt-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg gradient-ai flex items-center justify-center animate-pulse-ring">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-violet-700">Copiloto IA</p>
-                  <p className="text-[10px] text-violet-400">claude-sonnet-4-6</p>
-                </div>
-              </div>
-              <p className="text-xs text-violet-600 leading-relaxed mb-4">
-                Genera tu primer presupuesto con IA. Describe tu obra en lenguaje natural y obtén un presupuesto completo con APUs en minutos.
-              </p>
-              <Link href="/cotizador">
-                <Button size="sm" className="w-full h-7 text-xs gradient-ai border-0 text-white hover:opacity-90">
-                  Empezar ahora
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </EditorialCard>
         </div>
       </div>
 
-      {/* Projects Table */}
-      {projects.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle>Proyectos activos</CardTitle>
-              <button className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
-                Ver todos <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 px-3 py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-              <span>Proyecto</span>
-              <span>Tipo</span>
-              <span>Estado</span>
-              <span>Presupuesto</span>
-              <span>Avance</span>
-            </div>
-            {projects.map((project) => {
-              const sc = statusConfig[project.status] ?? { label: project.status, dot: "bg-slate-400" }
-              return (
-                <div
-                  key={project.id}
-                  className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 items-center px-3 py-3.5 border-b border-slate-50 hover:bg-slate-50 rounded-md transition-colors cursor-pointer group"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate group-hover:text-indigo-600 transition-colors">
-                      {project.name}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate">{project.location}</p>
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    {typeLabel[project.type] ?? project.type}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-                    <span className="text-xs text-slate-600">{sc.label}</span>
-                  </div>
-                  <div className="text-sm font-medium text-slate-800 font-mono">
-                    {project.total_budget ? formatCurrency(project.total_budget) : <span className="text-slate-400">—</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Progress value={project.progress} className="h-1.5 flex-1" />
-                    <span className="text-xs text-slate-500 w-8 text-right">{project.progress}%</span>
+      {/* Recent budgets */}
+      <EditorialCard
+        title="Presupuestos recientes"
+        action={
+          <Link href="/presupuestos" className="flex items-center gap-1 font-mono text-[11px] uppercase tracking-wide text-[var(--brass)] hover:opacity-80">
+            Ver todos <ChevronRight className="h-3 w-3" />
+          </Link>
+        }
+      >
+        {loading ? (
+          <div className="py-8 text-center text-sm text-[var(--muted)]">Cargando…</div>
+        ) : recentBudgets.length === 0 ? (
+          <div className="space-y-3 py-10 text-center">
+            <Sparkles className="mx-auto h-7 w-7 text-[var(--hairline)]" />
+            <p className="text-sm text-[var(--muted)]">Aún no hay presupuestos generados.</p>
+            <Link
+              href="/cotizador"
+              className="inline-flex items-center gap-2 rounded-sm bg-[var(--brass)] px-4 py-2 text-xs font-semibold text-[var(--paper)] transition-opacity hover:opacity-90"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Generar primer presupuesto
+            </Link>
+          </div>
+        ) : (
+          <ul className="divide-y divide-[var(--hairline)]">
+            {recentBudgets.slice(0, 6).map((b) => (
+              <li key={b.id} className="flex items-start justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[var(--ink)]">{b.project_name}</p>
+                  <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wide text-[var(--muted)]">{b.location}</p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    {b.total_amount && (
+                      <span className="font-mono text-xs tabular-nums text-[var(--ink)]">
+                        {formatCurrency(b.total_amount)}
+                      </span>
+                    )}
+                    {b.confidence && (
+                      <>
+                        <span className="text-[var(--hairline)]">·</span>
+                        <span className="font-mono text-[10px] uppercase tracking-wide text-[var(--brass)]">
+                          IA {b.confidence}%
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
-              )
-            })}
-          </CardContent>
-        </Card>
+                <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-[var(--muted)]">
+                  {timeAgo(new Date(b.created_at))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </EditorialCard>
+
+      {/* Projects table */}
+      {projects.length > 0 && (
+        <EditorialCard title="Proyectos activos">
+          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 border-b border-[var(--hairline)] px-1 pb-2">
+            {["Proyecto", "Tipo", "Estado", "Presupuesto", "Avance"].map((h) => (
+              <MonoLabel key={h}>{h}</MonoLabel>
+            ))}
+          </div>
+          {projects.map((project) => {
+            const sc = statusConfig[project.status] ?? { label: project.status, dot: "var(--muted)" }
+            return (
+              <div
+                key={project.id}
+                className="group grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center gap-4 border-b border-[var(--hairline)] px-1 py-3.5 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--ink)] transition-colors group-hover:text-[var(--brass)]">
+                    {project.name}
+                  </p>
+                  <p className="truncate font-mono text-[11px] uppercase tracking-wide text-[var(--muted)]">{project.location}</p>
+                </div>
+                <div className="text-xs text-[var(--muted)]">
+                  {typeLabel[project.type] ?? project.type}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: sc.dot }} />
+                  <span className="text-xs text-[var(--ink)]">{sc.label}</span>
+                </div>
+                <div className="font-mono text-sm tabular-nums text-[var(--ink)]">
+                  {project.total_budget ? formatCurrency(project.total_budget) : <span className="text-[var(--muted)]">—</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-[var(--hairline)]">
+                    <div className="h-full rounded-full bg-[var(--brass)]" style={{ width: `${project.progress}%` }} />
+                  </div>
+                  <span className="w-8 text-right font-mono text-[11px] tabular-nums text-[var(--muted)]">{project.progress}%</span>
+                </div>
+              </div>
+            )
+          })}
+        </EditorialCard>
       )}
+
+      {/* Register mark footer */}
+      <div className="flex items-center justify-between pt-2">
+        <MonoLabel>InfraPilot · Tablero editorial</MonoLabel>
+        <Crosshair className="h-3 w-3 text-[var(--hairline)]" />
+      </div>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx"
+import type { GeneratedBudget } from "@/types"
 import { mockGeneratedBudget } from "./mock-data"
 import {
   budgetMeta,
@@ -29,10 +30,10 @@ function sheet(rows: Row[], widths: number[]): XLSX.WorkSheet {
 }
 
 // ── SHEET 1 — RESUMEN ─────────────────────────────────────────
-function buildResumen(): XLSX.WorkSheet {
+function buildResumen(b: GeneratedBudget): XLSX.WorkSheet {
   const fin = financialSummary
   const aiu = fin.aiu
-  const totalPartidas = mockGeneratedBudget.sections.reduce((s, sec) => s + sec.items.length, 0)
+  const totalPartidas = b.sections.reduce((s, sec) => s + sec.items.length, 0)
 
   const rows: Row[] = [
     ["INFRAPILOT AI  ·  PRESUPUESTO DETALLADO"],
@@ -55,7 +56,7 @@ function buildResumen(): XLSX.WorkSheet {
     ["Área construida:", n(budgetMeta.totalArea, INT), "m²"],
     ["Distribución:",    `${budgetMeta.floors} pisos + 2 sótanos`, ""],
     ["Plazo:",           `${budgetMeta.duration} meses`, ""],
-    ["Secciones:",       n(mockGeneratedBudget.sections.length, INT), ""],
+    ["Secciones:",       n(b.sections.length, INT), ""],
     ["Partidas totales:", n(totalPartidas, INT), ""],
     [],
     ["ESTRUCTURA FINANCIERA", "IMPORTE (PEN)", "%"],
@@ -90,14 +91,14 @@ function buildResumen(): XLSX.WorkSheet {
 }
 
 // ── SHEET 2 — ACTIVIDADES ─────────────────────────────────────
-function buildActividades(): XLSX.WorkSheet {
+function buildActividades(b: GeneratedBudget): XLSX.WorkSheet {
   const rows: Row[] = [
     ["PARTIDAS DEL PRESUPUESTO — " + budgetMeta.projectName.toUpperCase()],
     [],
     ["CÓDIGO", "DESCRIPCIÓN", "UND.", "METRADO", "P. UNITARIO (PEN)", "PARCIAL (PEN)", "IA"],
   ]
 
-  for (const sec of mockGeneratedBudget.sections) {
+  for (const sec of b.sections) {
     // Section header
     rows.push([sec.code, sec.name.toUpperCase(), "", "", "", n(sec.subtotal), ""])
     // Items
@@ -115,14 +116,14 @@ function buildActividades(): XLSX.WorkSheet {
     rows.push([])
   }
 
-  const total = mockGeneratedBudget.sections.reduce((s, sec) => s + sec.subtotal, 0)
+  const total = b.sections.reduce((s, sec) => s + sec.subtotal, 0)
   rows.push(["", "COSTO DIRECTO TOTAL", "", "", "", n(total), ""])
 
   return sheet(rows, [12, 52, 8, 12, 20, 20, 10])
 }
 
 // ── SHEET 3 — APUs ────────────────────────────────────────────
-function buildAPUs(): XLSX.WorkSheet {
+function buildAPUs(b: GeneratedBudget): XLSX.WorkSheet {
   const rows: Row[] = [
     ["ANÁLISIS DE PRECIOS UNITARIOS — " + budgetMeta.projectName.toUpperCase()],
     [budgetMeta.priceSource],
@@ -130,7 +131,7 @@ function buildAPUs(): XLSX.WorkSheet {
   ]
 
   // Full APU detail for the main sample
-  const apu = mockGeneratedBudget.apuSample
+  const apu = b.apuSample
   rows.push(
     [`APU DETALLADO · ${apu.itemCode}  ${apu.itemName}`],
     ["Unidad:", apu.unit, "", "Región:", apu.region, "", "Fecha:", apu.priceDate],
@@ -246,14 +247,15 @@ function buildManoObra(): XLSX.WorkSheet {
 }
 
 // ── Main export ───────────────────────────────────────────────
-export function exportPresupuestoExcel() {
+export function exportPresupuestoExcel(budget?: GeneratedBudget) {
+  const b = budget ?? mockGeneratedBudget
   const wb = XLSX.utils.book_new()
 
-  XLSX.utils.book_append_sheet(wb, buildResumen(),     "Resumen")
-  XLSX.utils.book_append_sheet(wb, buildActividades(), "Actividades")
-  XLSX.utils.book_append_sheet(wb, buildAPUs(),        "APUs")
-  XLSX.utils.book_append_sheet(wb, buildMateriales(),  "Materiales")
-  XLSX.utils.book_append_sheet(wb, buildManoObra(),    "Mano de Obra")
+  XLSX.utils.book_append_sheet(wb, buildResumen(b),     "Resumen")
+  XLSX.utils.book_append_sheet(wb, buildActividades(b), "Actividades")
+  XLSX.utils.book_append_sheet(wb, buildAPUs(b),        "APUs")
+  XLSX.utils.book_append_sheet(wb, buildMateriales(),   "Materiales")
+  XLSX.utils.book_append_sheet(wb, buildManoObra(),     "Mano de Obra")
 
   const filename = `InfraPilot-${budgetMeta.projectCode}-${budgetMeta.date}.xlsx`
   XLSX.writeFile(wb, filename)

@@ -5,11 +5,10 @@ import {
   Search, Plus, Trash2, Edit2, Check, X,
   Package, HardHat, Wrench, FileSpreadsheet,
 } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { isSupabaseConfigured } from "@/lib/supabase/client"
 import { DemoNotice } from "@/components/demo-notice"
+import { EditorialCard, MonoLabel } from "@/components/editorial"
 
 type Category = "material" | "labor" | "equipment"
 
@@ -22,10 +21,10 @@ interface PriceItem {
   category: Category
 }
 
-const CAT_CONFIG: Record<Category, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  material:  { label: "Material",    color: "text-indigo-600",  bg: "bg-indigo-50",  icon: Package },
-  labor:     { label: "Mano de Obra",color: "text-violet-600",  bg: "bg-violet-50",  icon: HardHat },
-  equipment: { label: "Equipo",      color: "text-emerald-600", bg: "bg-emerald-50", icon: Wrench  },
+const CAT_CONFIG: Record<Category, { label: string; icon: React.ElementType }> = {
+  material:  { label: "Material",     icon: Package },
+  labor:     { label: "Mano de Obra", icon: HardHat },
+  equipment: { label: "Equipo",       icon: Wrench  },
 }
 
 const EMPTY: Omit<PriceItem, "id"> = { code: "", description: "", unit: "", unit_price: 0, category: "material" }
@@ -54,6 +53,12 @@ export default function PreciosPage() {
     setLoading(false)
   }, [catFilter, search])
 
+  // Fetches on mount and whenever filters change. `load` sets state
+  // synchronously as its first statement (setLoading(true)), which
+  // react-hooks/set-state-in-effect flags for any effect that calls it —
+  // there's no external subscription to move this into, it's a plain
+  // fetch-on-filter-change. Suppressed narrowly with rationale.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [load])
 
   const save = async () => {
@@ -112,25 +117,27 @@ export default function PreciosPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Base de Precios</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{items.length} items — materiales, mano de obra y equipos</p>
+          <h1 className="text-2xl font-semibold text-[var(--ink)]">Base de Precios</h1>
+          <p className="text-[var(--muted)] text-sm mt-0.5">{items.length} items — materiales, mano de obra y equipos</p>
         </div>
         <div className="flex items-center gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importExcel(f); e.target.value = "" }} />
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => fileRef.current?.click()} disabled={importing}>
-            <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+          <button onClick={() => fileRef.current?.click()} disabled={importing}
+            className="px-3 py-1.5 text-sm rounded-[2px] border border-[var(--hairline)] text-[var(--ink)] hover:border-[var(--brass)] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none">
+            <FileSpreadsheet className="w-4 h-4 text-[var(--muted)]" />
             {importing ? "Importando…" : "Importar Excel"}
-          </Button>
-          <Button variant="ai" size="sm" className="gap-2" onClick={() => { setEditId(null); setForm(EMPTY); setShowForm(true) }}>
+          </button>
+          <button onClick={() => { setEditId(null); setForm(EMPTY); setShowForm(true) }}
+            className="px-3 py-1.5 text-sm rounded-[2px] bg-[var(--brass)] text-[var(--paper)] hover:opacity-90 transition-opacity flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Nuevo precio
-          </Button>
+          </button>
         </div>
       </div>
 
       {importMsg && (
-        <div className={`text-sm px-4 py-3 rounded-xl ${importMsg.startsWith("✓") ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
+        <div className={`text-sm px-4 py-3 rounded-[2px] border ${importMsg.startsWith("✓") ? "border-[var(--ok)]/30 text-[var(--ok)]" : "border-[var(--warn)]/30 text-[var(--warn)]"}`}>
           {importMsg}
         </div>
       )}
@@ -138,12 +145,12 @@ export default function PreciosPage() {
       {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar descripción o código…"
-            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors"
           />
         </div>
         <div className="flex gap-1">
@@ -151,9 +158,10 @@ export default function PreciosPage() {
             const isAll = cat === "all"
             const cfg   = isAll ? null : CAT_CONFIG[cat]
             const count = counts[cat]
+            const active = catFilter === cat
             return (
               <button key={cat} onClick={() => setCatFilter(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${catFilter === cat ? (isAll ? "bg-slate-900 text-white" : `${cfg!.bg} ${cfg!.color} ring-2 ring-current`) : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+                className={`px-3 py-1.5 rounded-[2px] text-xs font-medium transition-colors border ${active ? "bg-[var(--brass)] text-[var(--paper)] border-[var(--brass)]" : "border-[var(--hairline)] text-[var(--muted)] hover:border-[var(--brass)]"}`}>
                 {isAll ? `Todos (${count})` : `${cfg!.label} (${count})`}
               </button>
             )
@@ -163,50 +171,52 @@ export default function PreciosPage() {
 
       {/* Form */}
       {showForm && (
-        <Card className="p-5 border-indigo-200 bg-indigo-50/30">
-          <h3 className="text-sm font-semibold text-slate-800 mb-4">{editId ? "Editar precio" : "Nuevo precio"}</h3>
+        <EditorialCard title={editId ? "Editar precio" : "Nuevo precio"}>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <input value={form.code ?? ""} onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
-              placeholder="Código (opcional)" className="px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+              placeholder="Código (opcional)" className="px-3 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors" />
             <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Descripción *" className="md:col-span-2 px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+              placeholder="Descripción *" className="md:col-span-2 px-3 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors" />
             <input value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
-              placeholder="Und (M3, ML…)" className="px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+              placeholder="Und (M3, ML…)" className="px-3 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors" />
             <input type="number" value={form.unit_price} onChange={e => setForm(f => ({ ...f, unit_price: +e.target.value }))}
-              placeholder="Precio unit." className="px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
+              placeholder="Precio unit." className="px-3 py-2 text-sm bg-transparent border border-[var(--hairline)] rounded-[2px] outline-none focus:border-[var(--brass)] transition-colors" />
           </div>
           <div className="flex items-center gap-3 mt-3">
             <div className="flex gap-2">
               {(Object.entries(CAT_CONFIG) as [Category, typeof CAT_CONFIG[Category]][]).map(([key, cfg]) => {
                 const Icon = cfg.icon
+                const active = form.category === key
                 return (
                   <button key={key} onClick={() => setForm(f => ({ ...f, category: key }))}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${form.category === key ? `${cfg.bg} ${cfg.color} border-current` : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-medium border transition-colors ${active ? "bg-[var(--brass)] text-[var(--paper)] border-[var(--brass)]" : "border-[var(--hairline)] text-[var(--muted)] hover:border-[var(--brass)]"}`}>
                     <Icon className="w-3.5 h-3.5" />{cfg.label}
                   </button>
                 )
               })}
             </div>
             <div className="flex gap-2 ml-auto">
-              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY) }}>
+              <button onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY) }}
+                className="px-3 py-1.5 text-sm rounded-[2px] border border-[var(--hairline)] text-[var(--ink)] hover:bg-[var(--paper)] transition-colors">
                 <X className="w-4 h-4" />
-              </Button>
-              <Button variant="ai" size="sm" onClick={save} disabled={saving || !form.description || !form.unit}>
+              </button>
+              <button onClick={save} disabled={saving || !form.description || !form.unit}
+                className="px-3 py-1.5 text-sm rounded-[2px] bg-[var(--brass)] text-[var(--paper)] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:pointer-events-none flex items-center">
                 <Check className="w-4 h-4 mr-1" />{saving ? "Guardando…" : "Guardar"}
-              </Button>
+              </button>
             </div>
           </div>
-        </Card>
+        </EditorialCard>
       )}
 
       {/* Table */}
-      <Card>
+      <EditorialCard className="!p-0">
         {loading ? (
-          <div className="py-16 text-center text-slate-400 text-sm">Cargando…</div>
+          <div className="py-16 text-center text-[var(--muted)] text-sm">Cargando…</div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center space-y-3">
-            <Package className="w-8 h-8 text-slate-300 mx-auto" />
-            <p className="text-slate-500 text-sm">
+            <Package className="w-8 h-8 text-[var(--hairline)] mx-auto" />
+            <p className="text-[var(--muted)] text-sm">
               {items.length === 0 ? "Importa tu Excel o agrega precios manualmente." : "No hay items que coincidan."}
             </p>
           </div>
@@ -214,12 +224,12 @@ export default function PreciosPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-20">Código</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Descripción</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-16">Und</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-32">Precio Unit.</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-28">Categoría</th>
+                <tr className="border-b border-[var(--hairline)]">
+                  <th className="text-left px-4 py-3 w-20"><MonoLabel>Código</MonoLabel></th>
+                  <th className="text-left px-4 py-3"><MonoLabel>Descripción</MonoLabel></th>
+                  <th className="text-center px-4 py-3 w-16"><MonoLabel>Und</MonoLabel></th>
+                  <th className="text-right px-4 py-3 w-32"><MonoLabel>Precio Unit.</MonoLabel></th>
+                  <th className="text-center px-4 py-3 w-28"><MonoLabel>Categoría</MonoLabel></th>
                   <th className="w-16 px-4 py-3"></th>
                 </tr>
               </thead>
@@ -228,30 +238,30 @@ export default function PreciosPage() {
                   const cfg  = CAT_CONFIG[item.category]
                   const Icon = cfg.icon
                   return (
-                    <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors group">
+                    <tr key={item.id} className="border-b border-[var(--hairline)] hover:bg-[var(--paper)] transition-colors group">
                       <td className="px-4 py-2.5">
-                        <span className="text-xs font-mono text-slate-400">{item.code ?? "—"}</span>
+                        <span className="text-xs font-mono text-[var(--muted)]">{item.code ?? "—"}</span>
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className="text-slate-800 font-medium">{item.description}</span>
+                        <span className="text-[var(--ink)] font-medium">{item.description}</span>
                       </td>
                       <td className="px-4 py-2.5 text-center">
-                        <span className="text-xs font-mono text-slate-500">{item.unit}</span>
+                        <span className="text-xs font-mono text-[var(--muted)]">{item.unit}</span>
                       </td>
                       <td className="px-4 py-2.5 text-right">
-                        <span className="font-mono font-semibold text-slate-800">{formatCurrency(item.unit_price)}</span>
+                        <span className="font-mono font-semibold text-[var(--ink)]">{formatCurrency(item.unit_price)}</span>
                       </td>
                       <td className="px-4 py-2.5 text-center">
-                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.bg} ${cfg.color}`}>
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-[var(--hairline)] text-[var(--muted)]">
                           <Icon className="w-3 h-3" />{cfg.label}
                         </span>
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => startEdit(item)} className="p-1 rounded hover:bg-indigo-100 text-indigo-500 transition-colors">
+                          <button onClick={() => startEdit(item)} className="p-1 rounded-[2px] hover:bg-[var(--card)] text-[var(--muted)] hover:text-[var(--brass)] transition-colors">
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => del(item.id)} className="p-1 rounded hover:bg-rose-100 text-rose-500 transition-colors">
+                          <button onClick={() => del(item.id)} className="p-1 rounded-[2px] hover:bg-[var(--warn)]/10 text-[var(--muted)] hover:text-[var(--warn)] transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -261,12 +271,12 @@ export default function PreciosPage() {
                 })}
               </tbody>
             </table>
-            <div className="px-4 py-2 border-t border-slate-50 text-xs text-slate-400">
+            <div className="px-4 py-2 border-t border-[var(--hairline)] text-xs text-[var(--muted)]">
               {filtered.length} items · Precios en COP
             </div>
           </div>
         )}
-      </Card>
+      </EditorialCard>
     </div>
   )
 }

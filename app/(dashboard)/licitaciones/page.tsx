@@ -13,6 +13,7 @@ import {
 } from "recharts"
 import { isSupabaseConfigured } from "@/lib/supabase/client"
 import { DemoNotice } from "@/components/demo-notice"
+import { Crosshair, EditorialCard, MonoLabel } from "@/components/editorial"
 
 // ── Types ──────────────────────────────────────────────────────
 type ComplianceStatus = "cumple" | "verificar" | "incumple" | "na"
@@ -129,14 +130,14 @@ function fmt(n: number) {
 
 function StatusBadge({ status }: { status: ComplianceStatus }) {
   const cfg = {
-    cumple:    { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", label: "Cumple",    Icon: CheckCircle },
-    verificar: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/30",      label: "Verificar", Icon: AlertTriangle },
-    incumple:  { bg: "bg-rose-500/10 text-rose-400 border-rose-500/30",         label: "Incumple",  Icon: XCircle },
-    na:        { bg: "bg-slate-500/10 text-slate-400 border-slate-500/30",      label: "N/A",       Icon: Info },
+    cumple:    { color: "var(--ok)",    border: "border-[var(--ok)]/30",    label: "Cumple",    Icon: CheckCircle },
+    verificar: { color: "var(--warn)",  border: "border-[var(--warn)]/30",  label: "Verificar", Icon: AlertTriangle },
+    incumple:  { color: "var(--warn)",  border: "border-[var(--warn)]/40",  label: "Incumple",  Icon: XCircle },
+    na:        { color: "var(--muted)", border: "border-[var(--hairline)]", label: "N/A",       Icon: Info },
   }[status]
-  const { bg, label, Icon } = cfg
+  const { color, border, label, Icon } = cfg
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-semibold ${bg}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] border text-xs font-semibold ${border}`} style={{ color }}>
       <Icon className="w-3 h-3" />{label}
     </span>
   )
@@ -144,20 +145,24 @@ function StatusBadge({ status }: { status: ComplianceStatus }) {
 
 function RiskBadge({ level }: { level: RiskLevel }) {
   const cfg = {
-    HIGH:   { bg: "bg-rose-500/10 text-rose-400 border-rose-500/30",             label: "ALTO" },
-    MEDIUM: { bg: "bg-amber-500/10 text-amber-400 border-amber-500/30",           label: "MEDIO" },
-    LOW:    { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",     label: "BAJO" },
+    HIGH:   { color: "var(--warn)", border: "border-[var(--warn)]/40",  label: "ALTO" },
+    MEDIUM: { color: "var(--warn)", border: "border-[var(--warn)]/25",  label: "MEDIO" },
+    LOW:    { color: "var(--ok)",   border: "border-[var(--ok)]/30",    label: "BAJO" },
   }[level]
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-bold tracking-wide ${cfg.bg}`}>{cfg.label}</span>
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-[2px] border text-xs font-bold tracking-wide ${cfg.border}`} style={{ color: cfg.color }}>
+      {cfg.label}
+    </span>
+  )
 }
 
-function CompatMeter({ pct, color = "#6366f1" }: { pct: number; color?: string }) {
+function CompatMeter({ pct, color = "var(--brass)" }: { pct: number; color?: string }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+      <div className="flex-1 h-2 bg-[var(--hairline)] rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="text-sm font-bold text-white w-10 text-right">{pct}%</span>
+      <span className="text-sm font-bold text-[var(--ink)] font-mono w-10 text-right">{pct}%</span>
     </div>
   )
 }
@@ -189,11 +194,11 @@ function UploadPhase({ onStart }: { onStart: (file: File | null) => void }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8">
       <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-center mx-auto mb-4">
-          <FileText className="w-8 h-8 text-violet-400" />
+        <div className="w-16 h-16 rounded-[2px] bg-[var(--brass)]/10 border border-[var(--brass)]/30 flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-8 h-8 text-[var(--brass)]" />
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">Analizador de Licitaciones</h1>
-        <p className="text-slate-400 max-w-lg">
+        <h1 className="text-3xl font-semibold text-[var(--ink)] mb-2">Analizador de Licitaciones</h1>
+        <p className="text-[var(--muted)] max-w-lg">
           Sube el expediente técnico en PDF. La IA extrae requisitos, detecta riesgos,
           verifica garantías y calcula tu compatibilidad en segundos.
         </p>
@@ -204,23 +209,23 @@ function UploadPhase({ onStart }: { onStart: (file: File | null) => void }) {
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`w-full max-w-xl border-2 border-dashed rounded-2xl p-10 flex flex-col items-center gap-4 cursor-pointer transition-all
-          ${dragging ? "border-violet-500 bg-violet-500/5" : "border-slate-600 hover:border-violet-500/60 hover:bg-slate-800/40"}`}
+        className={`w-full max-w-xl border-2 border-dashed rounded-[2px] p-10 flex flex-col items-center gap-4 cursor-pointer transition-all
+          ${dragging ? "border-[var(--brass)] bg-[var(--brass)]/5" : "border-[var(--hairline)] hover:border-[var(--brass)]/60 hover:bg-[var(--card)]"}`}
       >
         <input ref={inputRef} type="file" accept=".pdf" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f) }} />
-        <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${dragging ? "bg-violet-500/20" : "bg-slate-700"}`}>
-          <Upload className={`w-7 h-7 ${dragging ? "text-violet-400" : "text-slate-400"}`} />
+        <div className={`w-14 h-14 rounded-[2px] flex items-center justify-center transition-colors ${dragging ? "bg-[var(--brass)]/20" : "bg-[var(--card)] border border-[var(--hairline)]"}`}>
+          <Upload className={`w-7 h-7 ${dragging ? "text-[var(--brass)]" : "text-[var(--muted)]"}`} />
         </div>
         {file ? (
           <>
             <div className="text-center">
-              <p className="text-white font-medium">{file.name}</p>
-              <p className="text-slate-400 text-sm">{(file.size / 1024 / 1024).toFixed(1)} MB · PDF</p>
+              <p className="text-[var(--ink)] font-medium">{file.name}</p>
+              <p className="text-[var(--muted)] text-sm">{(file.size / 1024 / 1024).toFixed(1)} MB · PDF</p>
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); onStart(file) }}
-              className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-colors"
+              className="px-6 py-2.5 rounded-[2px] bg-[var(--brass)] hover:opacity-90 text-[var(--paper)] font-semibold transition-opacity"
             >
               Analizar con IA
             </button>
@@ -228,19 +233,19 @@ function UploadPhase({ onStart }: { onStart: (file: File | null) => void }) {
         ) : (
           <>
             <div className="text-center">
-              <p className="text-white font-medium">Arrastra el PDF aquí</p>
-              <p className="text-slate-400 text-sm">o haz clic para seleccionar</p>
+              <p className="text-[var(--ink)] font-medium">Arrastra el PDF aquí</p>
+              <p className="text-[var(--muted)] text-sm">o haz clic para seleccionar</p>
             </div>
-            <p className="text-xs text-slate-500">PDF hasta 50 MB · Bases de licitación, TdR o expediente técnico</p>
+            <p className="text-xs text-[var(--muted)]">PDF hasta 50 MB · Bases de licitación, TdR o expediente técnico</p>
           </>
         )}
       </div>
 
       <div className="flex flex-col items-center gap-2">
-        <p className="text-slate-500 text-sm">o prueba una licitación de ejemplo</p>
+        <p className="text-[var(--muted)] text-sm">o prueba una licitación de ejemplo</p>
         <button
           onClick={() => onStart(null)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-violet-500/40 text-violet-400 hover:bg-violet-500/10 transition-colors font-medium text-sm"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-[2px] border border-[var(--brass)]/40 text-[var(--brass)] hover:bg-[var(--brass)]/10 transition-colors font-medium text-sm"
         >
           <Zap className="w-4 h-4" />
           Generar análisis de ejemplo
@@ -255,34 +260,33 @@ function ProcessingPhase({ step }: { step: number }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8">
       <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
-          <Zap className="w-8 h-8 text-white animate-pulse" />
+        <div className="w-16 h-16 rounded-[2px] mx-auto mb-4 flex items-center justify-center bg-[var(--brass)]">
+          <Zap className="w-8 h-8 text-[var(--paper)] animate-pulse" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-1">Analizando licitación…</h2>
-        <p className="text-slate-400">La IA está procesando el documento</p>
+        <h2 className="text-2xl font-semibold text-[var(--ink)] mb-1">Analizando licitación…</h2>
+        <p className="text-[var(--muted)]">La IA está procesando el documento</p>
       </div>
       <div className="w-full max-w-lg space-y-2">
         {GENERIC_STEPS.map((s, i) => {
           const done = i < step, active = i === step
           return (
-            <div key={s.id} className={`flex items-start gap-3 p-3 rounded-xl transition-all ${active ? "bg-violet-500/10 border border-violet-500/30" : "border border-transparent"}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? "bg-emerald-500" : active ? "bg-violet-500 animate-pulse" : "bg-slate-700"}`}>
-                {done ? <CheckCircle className="w-3.5 h-3.5 text-white" /> : <span className="text-xs font-bold text-white">{i + 1}</span>}
+            <div key={s.id} className={`flex items-start gap-3 p-3 rounded-[2px] transition-all ${active ? "bg-[var(--brass)]/10 border border-[var(--brass)]/30" : "border border-transparent"}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${done ? "bg-[var(--ok)]" : active ? "bg-[var(--brass)] animate-pulse" : "bg-[var(--hairline)]"}`}>
+                {done ? <CheckCircle className="w-3.5 h-3.5 text-[var(--paper)]" /> : <span className="text-xs font-bold text-[var(--paper)]">{i + 1}</span>}
               </div>
-              <p className={`text-sm font-medium mt-0.5 ${done ? "text-slate-400 line-through" : active ? "text-white" : "text-slate-500"}`}>{s.label}</p>
+              <p className={`text-sm font-medium mt-0.5 ${done ? "text-[var(--muted)] line-through" : active ? "text-[var(--ink)]" : "text-[var(--muted)]"}`}>{s.label}</p>
             </div>
           )
         })}
       </div>
       <div className="w-full max-w-lg">
-        <div className="flex justify-between text-xs text-slate-500 mb-1.5">
+        <div className="flex justify-between text-xs text-[var(--muted)] mb-1.5">
           <span>Procesando…</span>
           <span>{Math.round((step / GENERIC_STEPS.length) * 100)}%</span>
         </div>
-        <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${(step / GENERIC_STEPS.length) * 100}%`, background: "linear-gradient(90deg, #7c3aed, #4f46e5)" }} />
+        <div className="h-2 bg-[var(--hairline)] rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-700 bg-[var(--brass)]"
+            style={{ width: `${(step / GENERIC_STEPS.length) * 100}%` }} />
         </div>
       </div>
     </div>
@@ -331,14 +335,14 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/30 text-violet-400 text-xs font-semibold">{meta.proceso}</span>
-            <span className="text-slate-500 text-xs">{meta.tipo} · {meta.entidad}</span>
+            <span className="px-2 py-0.5 rounded-[2px] bg-[var(--brass)]/10 border border-[var(--brass)]/30 text-[var(--brass)] text-xs font-semibold">{meta.proceso}</span>
+            <span className="text-[var(--muted)] text-xs">{meta.tipo} · {meta.entidad}</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">{meta.nombre}</h1>
-          <p className="text-slate-400 text-sm mt-0.5">{meta.objeto}</p>
+          <h1 className="text-2xl font-semibold text-[var(--ink)]">{meta.nombre}</h1>
+          <p className="text-[var(--muted)] text-sm mt-0.5">{meta.objeto}</p>
         </div>
         <button onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors flex items-center gap-2">
+          className="px-4 py-2 rounded-[2px] border border-[var(--hairline)] text-[var(--ink)] hover:border-[var(--brass)] text-sm font-medium transition-colors flex items-center gap-2">
           <Upload className="w-4 h-4" /> Nueva licitación
         </button>
       </div>
@@ -346,78 +350,79 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Valor Referencial",  value: fmt(meta.valorReferencial), icon: DollarSign, color: "text-indigo-400", bg: "bg-indigo-500/10" },
-          { label: "Plazo de ejecución", value: `${meta.plazoEjecucion} meses`,  icon: Clock,     color: "text-cyan-400",   bg: "bg-cyan-500/10" },
-          { label: "Páginas analizadas", value: `${meta.totalPaginas}`,           icon: FileText,  color: "text-violet-400", bg: "bg-violet-500/10" },
-          { label: "Sector",             value: meta.sector,                       icon: Building2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${bg}`}>
-              <Icon className={`w-5 h-5 ${color}`} />
+          { label: "Valor Referencial",  value: fmt(meta.valorReferencial), icon: DollarSign },
+          { label: "Plazo de ejecución", value: `${meta.plazoEjecucion} meses`,  icon: Clock },
+          { label: "Páginas analizadas", value: `${meta.totalPaginas}`,           icon: FileText },
+          { label: "Sector",             value: meta.sector,                       icon: Building2 },
+        ].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="editorial-card relative p-4">
+            <Crosshair className="pointer-events-none absolute right-2 top-2 h-3 w-3 text-[var(--hairline)]" />
+            <div className="w-9 h-9 rounded-[2px] flex items-center justify-center mb-3 bg-[var(--brass)]/10">
+              <Icon className="w-5 h-5 text-[var(--brass)]" />
             </div>
-            <p className="text-xs text-slate-400">{label}</p>
-            <p className="text-lg font-bold text-white">{value}</p>
+            <MonoLabel>{label}</MonoLabel>
+            <p className="text-lg font-semibold text-[var(--ink)] font-mono mt-1">{value}</p>
           </div>
         ))}
       </div>
 
       {/* Compatibility + Radar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-white">Compatibilidad Global</h3>
+        <EditorialCard title="Compatibilidad Global" className="space-y-4">
           <div className="text-center py-2">
             <div className="relative w-28 h-28 mx-auto">
               <svg viewBox="0 0 100 100" className="w-28 h-28 -rotate-90">
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#1e293b" strokeWidth="10" />
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#6366f1" strokeWidth="10"
+                <circle cx="50" cy="50" r="38" fill="none" stroke="var(--hairline)" strokeWidth="10" />
+                <circle cx="50" cy="50" r="38" fill="none" stroke="var(--brass)" strokeWidth="10"
                   strokeDasharray={`${(compatibilidad.global / 100) * 238.76} 238.76`} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-black text-white">{compatibilidad.global}%</span>
+                <span className="text-3xl font-bold text-[var(--ink)] font-mono">{compatibilidad.global}%</span>
               </div>
             </div>
-            <p className="text-slate-400 text-sm mt-1">Compatibilidad estimada</p>
+            <p className="text-[var(--muted)] text-sm mt-1">Compatibilidad estimada</p>
           </div>
           <div className="space-y-2.5">
             {[
-              { label: "Técnico",        pct: compatibilidad.tecnico,        color: "#6366f1" },
-              { label: "Económico",      pct: compatibilidad.economico,      color: "#22d3ee" },
-              { label: "Experiencia",    pct: compatibilidad.experiencia,    color: "#f59e0b" },
-              { label: "Administrativo", pct: compatibilidad.administrativo, color: "#10b981" },
-              { label: "Ambiental",      pct: compatibilidad.ambiental,      color: "#f43f5e" },
-            ].map(({ label, pct, color }) => (
+              { label: "Técnico",        pct: compatibilidad.tecnico },
+              { label: "Económico",      pct: compatibilidad.economico },
+              { label: "Experiencia",    pct: compatibilidad.experiencia },
+              { label: "Administrativo", pct: compatibilidad.administrativo },
+              { label: "Ambiental",      pct: compatibilidad.ambiental },
+            ].map(({ label, pct }) => (
               <div key={label}>
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                  <span>{label}</span><span className="font-medium text-white">{pct}%</span>
+                <div className="flex justify-between text-xs text-[var(--muted)] mb-1">
+                  <span>{label}</span><span className="font-medium text-[var(--ink)] font-mono">{pct}%</span>
                 </div>
-                <CompatMeter pct={pct} color={color} />
+                <CompatMeter pct={pct} />
               </div>
             ))}
           </div>
-        </div>
+        </EditorialCard>
 
-        <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-1">Radar de Compatibilidad</h3>
-          <p className="text-xs text-slate-400 mb-4">Tu empresa vs. requisitos de la licitación</p>
+        <div className="lg:col-span-2 editorial-card relative p-5">
+          <Crosshair className="pointer-events-none absolute right-2 top-2 h-3 w-3 text-[var(--hairline)]" />
+          <h3 className="text-sm font-semibold text-[var(--ink)] mb-1">Radar de Compatibilidad</h3>
+          <p className="text-xs text-[var(--muted)] mb-4">Tu empresa vs. requisitos de la licitación</p>
           <ResponsiveContainer width="100%" height={240}>
             <RadarChart data={radarData} margin={{ top: 5, right: 30, bottom: 5, left: 30 }}>
-              <PolarGrid stroke="#334155" />
-              <PolarAngleAxis dataKey="dimension" tick={{ fill: "#94a3b8", fontSize: 12 }} />
-              <Radar name="Requerido" dataKey="requerido" stroke="#334155" fill="#334155" fillOpacity={0.3} />
-              <Radar name="Empresa" dataKey="empresa" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} dot={{ fill: "#6366f1", r: 4 }} />
-              <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8 }} labelStyle={{ color: "#94a3b8" }} itemStyle={{ color: "#c7d2fe" }} />
+              <PolarGrid stroke="var(--hairline)" />
+              <PolarAngleAxis dataKey="dimension" tick={{ fill: "#8A857C", fontSize: 12 }} />
+              <Radar name="Requerido" dataKey="requerido" stroke="#E5E0D6" fill="#E5E0D6" fillOpacity={0.4} />
+              <Radar name="Empresa" dataKey="empresa" stroke="#A8895B" fill="#A8895B" fillOpacity={0.25} dot={{ fill: "#A8895B", r: 4 }} />
+              <Tooltip contentStyle={{ background: "#FBFAF7", border: "1px solid #E5E0D6", borderRadius: 2 }} labelStyle={{ color: "#8A857C" }} itemStyle={{ color: "#1B1A17" }} />
             </RadarChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-4 gap-3 mt-3">
             {[
-              { label: "Cumple",    count: stats.cumple,    color: "text-emerald-400", bg: "bg-emerald-500/10" },
-              { label: "Verificar", count: stats.verificar, color: "text-amber-400",   bg: "bg-amber-500/10" },
-              { label: "Incumple",  count: stats.incumple,  color: "text-rose-400",    bg: "bg-rose-500/10" },
-              { label: "N/A",       count: stats.na,        color: "text-slate-400",   bg: "bg-slate-700" },
-            ].map(({ label, count, color, bg }) => (
-              <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
-                <p className={`text-2xl font-black ${color}`}>{count}</p>
-                <p className="text-xs text-slate-400">{label}</p>
+              { label: "Cumple",    count: stats.cumple,    color: "var(--ok)" },
+              { label: "Verificar", count: stats.verificar, color: "var(--warn)" },
+              { label: "Incumple",  count: stats.incumple,  color: "var(--warn)" },
+              { label: "N/A",       count: stats.na,        color: "var(--muted)" },
+            ].map(({ label, count, color }) => (
+              <div key={label} className="bg-[var(--paper)] border border-[var(--hairline)] rounded-[2px] p-3 text-center">
+                <p className="text-2xl font-bold font-mono" style={{ color }}>{count}</p>
+                <p className="text-xs text-[var(--muted)]">{label}</p>
               </div>
             ))}
           </div>
@@ -425,21 +430,22 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
       </div>
 
       {/* Criterios */}
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+      <div className="editorial-card relative p-5">
+        <Crosshair className="pointer-events-none absolute right-2 top-2 h-3 w-3 text-[var(--hairline)]" />
         <div className="flex items-center gap-2 mb-4">
-          <Star className="w-4 h-4 text-amber-400" />
-          <h3 className="text-sm font-semibold text-white">Criterios de Evaluación</h3>
-          <span className="text-xs text-slate-400 ml-auto">Factores de calificación — total 100 puntos</span>
+          <Star className="w-4 h-4 text-[var(--brass)]" />
+          <h3 className="text-sm font-semibold text-[var(--ink)]">Criterios de Evaluación</h3>
+          <span className="text-xs text-[var(--muted)] ml-auto">Factores de calificación — total 100 puntos</span>
         </div>
         <div className="flex gap-4 flex-wrap">
           {criteriosEvaluacion.map((c) => (
             <div key={c.factor} className="flex-1 min-w-40">
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-slate-300">{c.factor}</span>
-                <span className="font-bold text-white">{c.puntaje} pts</span>
+                <span className="text-[var(--ink)]/70">{c.factor}</span>
+                <span className="font-bold text-[var(--ink)] font-mono">{c.puntaje} pts</span>
               </div>
-              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${c.puntaje}%`, background: c.tipo === "económico" ? "#6366f1" : "#8b5cf6" }} />
+              <div className="h-2 bg-[var(--hairline)] rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-[var(--brass)]" style={{ width: `${c.puntaje}%`, opacity: c.tipo === "económico" ? 1 : 0.6 }} />
               </div>
             </div>
           ))}
@@ -447,15 +453,15 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
       </div>
 
       {/* Tabs */}
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-        <div className="flex border-b border-slate-700 overflow-x-auto">
+      <div className="editorial-card overflow-hidden">
+        <div className="flex border-b border-[var(--hairline)] overflow-x-auto">
           {tabs.map(({ key, label, count, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2
-                ${tab === key ? "border-indigo-500 text-indigo-400 bg-indigo-500/5" : "border-transparent text-slate-400 hover:text-white hover:bg-slate-700/30"}`}>
+                ${tab === key ? "border-[var(--brass)] text-[var(--brass)] bg-[var(--brass)]/5" : "border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)]"}`}>
               <Icon className="w-4 h-4" />
               {label}
-              {count && <span className={`text-xs px-1.5 py-0.5 rounded-md ${tab === key ? "bg-indigo-500/20 text-indigo-300" : "bg-slate-700 text-slate-400"}`}>{count}</span>}
+              {count && <span className={`text-xs px-1.5 py-0.5 rounded-[2px] font-mono ${tab === key ? "bg-[var(--brass)]/20 text-[var(--brass)]" : "bg-[var(--hairline)] text-[var(--muted)]"}`}>{count}</span>}
             </button>
           ))}
         </div>
@@ -465,34 +471,38 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
           {tab === "requisitos" && (
             <div className="space-y-3">
               {requisitos.map((group) => (
-                <div key={group.id} className="border border-slate-700 rounded-xl overflow-hidden">
+                <div key={group.id} className="border border-[var(--hairline)] rounded-[2px] overflow-hidden">
                   <button onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-slate-700/30 transition-colors">
+                    className="w-full flex items-center justify-between p-4 hover:bg-[var(--paper)] transition-colors">
                     <div className="flex items-center gap-3">
-                      {expandedGroup === group.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
-                      <span className="font-semibold text-white">{group.title}</span>
-                      <span className="text-xs text-slate-400">{group.items.length} criterios</span>
+                      {expandedGroup === group.id ? <ChevronDown className="w-4 h-4 text-[var(--muted)]" /> : <ChevronRight className="w-4 h-4 text-[var(--muted)]" />}
+                      <span className="font-semibold text-[var(--ink)]">{group.title}</span>
+                      <span className="text-xs text-[var(--muted)]">{group.items.length} criterios</span>
                     </div>
                     <div className="flex gap-1.5">
                       {(["cumple", "verificar", "incumple"] as ComplianceStatus[]).map((s) => {
                         const c = group.items.filter((i) => i.status === s).length
                         if (!c) return null
-                        const colors = { cumple: "bg-emerald-500/10 text-emerald-400", verificar: "bg-amber-500/10 text-amber-400", incumple: "bg-rose-500/10 text-rose-400", na: "" }
-                        return <span key={s} className={`text-xs px-2 py-0.5 rounded-md font-semibold ${colors[s]}`}>{c}</span>
+                        const colors: Record<ComplianceStatus, string> = { cumple: "var(--ok)", verificar: "var(--warn)", incumple: "var(--warn)", na: "var(--muted)" }
+                        return (
+                          <span key={s} className="text-xs px-2 py-0.5 rounded-[2px] font-semibold font-mono" style={{ color: colors[s], background: `color-mix(in srgb, ${colors[s]} 12%, transparent)` }}>
+                            {c}
+                          </span>
+                        )
                       })}
                     </div>
                   </button>
                   {expandedGroup === group.id && (
-                    <div className="border-t border-slate-700 divide-y divide-slate-700/50">
+                    <div className="border-t border-[var(--hairline)] divide-y divide-[var(--hairline)]">
                       {group.items.map((item) => (
-                        <div key={item.id} className="p-4 flex gap-4 hover:bg-slate-700/20 transition-colors">
+                        <div key={item.id} className="p-4 flex gap-4 hover:bg-[var(--paper)] transition-colors">
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <p className="font-medium text-white text-sm">{item.description}</p>
-                              {item.critical && <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">Crítico</span>}
-                              {item.clausula && <span className="text-xs text-slate-500">{item.clausula}</span>}
+                              <p className="font-medium text-[var(--ink)] text-sm">{item.description}</p>
+                              {item.critical && <span className="text-xs px-1.5 py-0.5 rounded-[2px] border border-[var(--warn)]/30" style={{ color: "var(--warn)" }}>Crítico</span>}
+                              {item.clausula && <span className="text-xs text-[var(--muted)]">{item.clausula}</span>}
                             </div>
-                            <p className="text-xs text-slate-400">{item.detail}</p>
+                            <p className="text-xs text-[var(--muted)]">{item.detail}</p>
                           </div>
                           <div className="flex-shrink-0"><StatusBadge status={item.status} /></div>
                         </div>
@@ -509,43 +519,43 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {[
-                  { label: "Riesgo Alto",  count: stats.riesgosHigh,   color: "text-rose-400",    bg: "bg-rose-500/10 border-rose-500/20" },
-                  { label: "Riesgo Medio", count: stats.riesgosMedium, color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20" },
-                  { label: "Riesgo Bajo",  count: stats.riesgosLow,    color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-                ].map(({ label, count, color, bg }) => (
-                  <div key={label} className={`border rounded-xl p-3 text-center ${bg}`}>
-                    <p className={`text-2xl font-black ${color}`}>{count}</p>
-                    <p className="text-xs text-slate-400">{label}</p>
+                  { label: "Riesgo Alto",  count: stats.riesgosHigh,   color: "var(--warn)" },
+                  { label: "Riesgo Medio", count: stats.riesgosMedium, color: "var(--warn)" },
+                  { label: "Riesgo Bajo",  count: stats.riesgosLow,    color: "var(--ok)" },
+                ].map(({ label, count, color }) => (
+                  <div key={label} className="border border-[var(--hairline)] rounded-[2px] p-3 text-center">
+                    <p className="text-2xl font-bold font-mono" style={{ color }}>{count}</p>
+                    <p className="text-xs text-[var(--muted)]">{label}</p>
                   </div>
                 ))}
               </div>
               {riesgos.map((risk) => (
-                <div key={risk.id} className="border border-slate-700 rounded-xl overflow-hidden">
+                <div key={risk.id} className="border border-[var(--hairline)] rounded-[2px] overflow-hidden">
                   <button onClick={() => setExpandedRisk(expandedRisk === risk.id ? null : risk.id)}
-                    className="w-full flex items-start gap-3 p-4 hover:bg-slate-700/30 transition-colors text-left">
-                    <div className="mt-0.5">{expandedRisk === risk.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}</div>
+                    className="w-full flex items-start gap-3 p-4 hover:bg-[var(--paper)] transition-colors text-left">
+                    <div className="mt-0.5">{expandedRisk === risk.id ? <ChevronDown className="w-4 h-4 text-[var(--muted)]" /> : <ChevronRight className="w-4 h-4 text-[var(--muted)]" />}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <RiskBadge level={risk.level} />
-                        <span className="text-xs text-slate-400 capitalize">{risk.tipo}</span>
-                        {risk.clausula && <span className="text-xs text-slate-500">{risk.clausula}</span>}
+                        <span className="text-xs text-[var(--muted)] capitalize">{risk.tipo}</span>
+                        {risk.clausula && <span className="text-xs text-[var(--muted)]">{risk.clausula}</span>}
                       </div>
-                      <p className="font-semibold text-white">{risk.titulo}</p>
+                      <p className="font-semibold text-[var(--ink)]">{risk.titulo}</p>
                     </div>
-                    {risk.importeRiesgo && <span className="text-xs text-slate-400 flex-shrink-0">{risk.importeRiesgo}</span>}
+                    {risk.importeRiesgo && <span className="text-xs text-[var(--muted)] font-mono flex-shrink-0">{risk.importeRiesgo}</span>}
                   </button>
                   {expandedRisk === risk.id && (
-                    <div className="border-t border-slate-700 p-4 space-y-3">
-                      <p className="text-sm text-slate-300">{risk.descripcion}</p>
+                    <div className="border-t border-[var(--hairline)] p-4 space-y-3">
+                      <p className="text-sm text-[var(--ink)]/80">{risk.descripcion}</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="bg-slate-900/50 rounded-xl p-3">
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Probabilidad / Impacto</p>
-                          <p className="text-xs text-slate-300">{risk.probability}</p>
-                          <p className="text-xs text-rose-300 mt-1">{risk.impacto}</p>
+                        <div className="bg-[var(--paper)] border border-[var(--hairline)] rounded-[2px] p-3">
+                          <MonoLabel>Probabilidad / Impacto</MonoLabel>
+                          <p className="text-xs text-[var(--ink)]/80 mt-1">{risk.probability}</p>
+                          <p className="text-xs mt-1" style={{ color: "var(--warn)" }}>{risk.impacto}</p>
                         </div>
-                        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3">
-                          <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wide mb-1">Mitigación recomendada</p>
-                          <p className="text-xs text-slate-300">{risk.mitigacion}</p>
+                        <div className="bg-[var(--ok)]/5 border border-[var(--ok)]/20 rounded-[2px] p-3">
+                          <MonoLabel className="!text-[var(--ok)]">Mitigación recomendada</MonoLabel>
+                          <p className="text-xs text-[var(--ink)]/80 mt-1">{risk.mitigacion}</p>
                         </div>
                       </div>
                     </div>
@@ -558,44 +568,44 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
           {/* GARANTÍAS */}
           {tab === "garantias" && (
             <div className="space-y-4">
-              <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 flex justify-between items-center">
+              <div className="bg-[var(--paper)] border border-[var(--hairline)] rounded-[2px] p-4 flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-slate-400">Monto total de garantías estimadas</p>
-                  <p className="text-xl font-black text-white">{fmt(stats.garantiasTotal)}</p>
+                  <MonoLabel>Monto total de garantías estimadas</MonoLabel>
+                  <p className="text-xl font-bold text-[var(--ink)] font-mono mt-1">{fmt(stats.garantiasTotal)}</p>
                 </div>
-                <Shield className="w-8 h-8 text-indigo-400" />
+                <Shield className="w-8 h-8 text-[var(--brass)]" />
               </div>
               <div className="space-y-3">
                 {garantias.map((g) => (
-                  <div key={g.id} className="border border-slate-700 rounded-xl p-5 space-y-3">
+                  <div key={g.id} className="border border-[var(--hairline)] rounded-[2px] p-5 space-y-3">
                     <div className="flex justify-between items-start flex-wrap gap-2">
                       <div>
-                        <p className="font-bold text-white">{g.tipo}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{g.descripcion}</p>
+                        <p className="font-bold text-[var(--ink)]">{g.tipo}</p>
+                        <p className="text-xs text-[var(--muted)] mt-0.5">{g.descripcion}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-black text-indigo-400">{fmt(g.monto)}</p>
-                        <p className="text-xs text-slate-400">{g.montoPct}</p>
+                        <p className="text-xl font-bold text-[var(--brass)] font-mono">{fmt(g.monto)}</p>
+                        <p className="text-xs text-[var(--muted)]">{g.montoPct}</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      <div className="bg-slate-900/50 rounded-lg p-2.5">
-                        <p className="text-slate-500 mb-0.5">Plazo</p>
-                        <p className="text-slate-200">{g.plazo}</p>
+                      <div className="bg-[var(--paper)] rounded-[2px] p-2.5">
+                        <p className="text-[var(--muted)] mb-0.5">Plazo</p>
+                        <p className="text-[var(--ink)]/80">{g.plazo}</p>
                       </div>
-                      <div className="bg-slate-900/50 rounded-lg p-2.5">
-                        <p className="text-slate-500 mb-0.5">Tipo de documento</p>
-                        <p className="text-slate-200">{g.tipoDocumento}</p>
+                      <div className="bg-[var(--paper)] rounded-[2px] p-2.5">
+                        <p className="text-[var(--muted)] mb-0.5">Tipo de documento</p>
+                        <p className="text-[var(--ink)]/80">{g.tipoDocumento}</p>
                       </div>
-                      <div className="bg-slate-900/50 rounded-lg p-2.5">
-                        <p className="text-slate-500 mb-0.5">Momento</p>
-                        <p className="text-slate-200">{g.momento}</p>
+                      <div className="bg-[var(--paper)] rounded-[2px] p-2.5">
+                        <p className="text-[var(--muted)] mb-0.5">Momento</p>
+                        <p className="text-[var(--ink)]/80">{g.momento}</p>
                       </div>
                     </div>
                     {g.nota && (
-                      <div className="flex gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
-                        <Info className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-200">{g.nota}</p>
+                      <div className="flex gap-2 bg-[var(--warn)]/5 border border-[var(--warn)]/20 rounded-[2px] p-3">
+                        <Info className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--warn)" }} />
+                        <p className="text-xs" style={{ color: "var(--warn)" }}>{g.nota}</p>
                       </div>
                     )}
                   </div>
@@ -611,46 +621,46 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
                 {(["cumple", "verificar", "incumple"] as ComplianceStatus[]).map((s) => {
                   const count = experienciaRequerida.filter((e) => e.match === s).length
                   const cfg = {
-                    cumple:    { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Cumple" },
-                    verificar: { color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20",    label: "Verificar" },
-                    incumple:  { color: "text-rose-400",    bg: "bg-rose-500/10 border-rose-500/20",      label: "Incumple" },
-                    na:        { color: "text-slate-400",   bg: "bg-slate-700",                           label: "N/A" },
+                    cumple:    { color: "var(--ok)",   label: "Cumple" },
+                    verificar: { color: "var(--warn)", label: "Verificar" },
+                    incumple:  { color: "var(--warn)", label: "Incumple" },
+                    na:        { color: "var(--muted)", label: "N/A" },
                   }[s]
                   return (
-                    <div key={s} className={`border rounded-xl p-3 text-center ${cfg.bg}`}>
-                      <p className={`text-2xl font-black ${cfg.color}`}>{count}</p>
-                      <p className="text-xs text-slate-400">{cfg.label}</p>
+                    <div key={s} className="border border-[var(--hairline)] rounded-[2px] p-3 text-center">
+                      <p className="text-2xl font-bold font-mono" style={{ color: cfg.color }}>{count}</p>
+                      <p className="text-xs text-[var(--muted)]">{cfg.label}</p>
                     </div>
                   )
                 })}
               </div>
               {experienciaRequerida.map((exp) => (
-                <div key={exp.id} className={`border rounded-xl p-5 space-y-3
-                  ${exp.match === "incumple" ? "border-rose-500/30 bg-rose-500/5" :
-                    exp.match === "verificar" ? "border-amber-500/30 bg-amber-500/5" : "border-slate-700"}`}>
+                <div key={exp.id} className={`border rounded-[2px] p-5 space-y-3
+                  ${exp.match === "incumple" ? "border-[var(--warn)]/30 bg-[var(--warn)]/5" :
+                    exp.match === "verificar" ? "border-[var(--warn)]/25 bg-[var(--warn)]/5" : "border-[var(--hairline)]"}`}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <StatusBadge status={exp.match} />
-                        {exp.critical && <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">Crítico</span>}
-                        {exp.clausula && <span className="text-xs text-slate-500">{exp.clausula}</span>}
+                        {exp.critical && <span className="text-xs px-1.5 py-0.5 rounded-[2px] border border-[var(--warn)]/30" style={{ color: "var(--warn)" }}>Crítico</span>}
+                        {exp.clausula && <span className="text-xs text-[var(--muted)]">{exp.clausula}</span>}
                       </div>
-                      <p className="font-bold text-white">{exp.titulo}</p>
+                      <p className="font-bold text-[var(--ink)]">{exp.titulo}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-400">{exp.requisito}</p>
-                  <div className={`flex gap-2 rounded-lg p-3
-                    ${exp.match === "incumple" ? "bg-rose-500/10 border border-rose-500/20" :
-                      exp.match === "verificar" ? "bg-amber-500/10 border border-amber-500/20" :
-                      "bg-emerald-500/5 border border-emerald-500/20"}`}>
-                    {exp.match === "cumple" ? <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" /> :
-                     exp.match === "verificar" ? <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" /> :
-                     <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />}
-                    <p className={`text-xs ${exp.match === "cumple" ? "text-emerald-200" : exp.match === "verificar" ? "text-amber-200" : "text-rose-200"}`}>
+                  <p className="text-xs text-[var(--muted)]">{exp.requisito}</p>
+                  <div className={`flex gap-2 rounded-[2px] p-3 border
+                    ${exp.match === "incumple" ? "bg-[var(--warn)]/10 border-[var(--warn)]/20" :
+                      exp.match === "verificar" ? "bg-[var(--warn)]/10 border-[var(--warn)]/20" :
+                      "bg-[var(--ok)]/5 border-[var(--ok)]/20"}`}>
+                    {exp.match === "cumple" ? <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--ok)" }} /> :
+                     exp.match === "verificar" ? <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--warn)" }} /> :
+                     <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--warn)" }} />}
+                    <p className="text-xs" style={{ color: exp.match === "cumple" ? "var(--ok)" : "var(--warn)" }}>
                       {exp.empresaEstado}
                     </p>
                   </div>
-                  {exp.detalle && <p className="text-xs text-slate-500 italic">{exp.detalle}</p>}
+                  {exp.detalle && <p className="text-xs text-[var(--muted)] italic">{exp.detalle}</p>}
                 </div>
               ))}
             </div>
@@ -659,22 +669,22 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
       </div>
 
       {/* AI summary */}
-      <div className="rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg, #7c3aed22, #4f46e522)", border: "1px solid #7c3aed44" }}>
+      <div className="rounded-[2px] p-5 border border-[var(--brass)]/30 bg-[var(--brass)]/5">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)" }}>
-            <Zap className="w-4 h-4 text-white" />
+          <div className="w-7 h-7 rounded-[2px] flex items-center justify-center bg-[var(--brass)]">
+            <Zap className="w-4 h-4 text-[var(--paper)]" />
           </div>
-          <span className="font-semibold text-violet-300">Recomendación IA</span>
+          <span className="font-semibold text-[var(--brass)]">Recomendación IA</span>
         </div>
-        <p className="text-slate-200 text-sm leading-relaxed mb-4">{insights.conclusion}</p>
+        <p className="text-[var(--ink)]/80 text-sm leading-relaxed mb-4">{insights.conclusion}</p>
         <div className="space-y-2">
-          <div className="flex gap-2 bg-rose-500/10 border border-rose-500/20 rounded-lg p-3">
-            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-rose-200">{insights.riesgoPrincipal}</p>
+          <div className="flex gap-2 bg-[var(--warn)]/10 border border-[var(--warn)]/20 rounded-[2px] p-3">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--warn)" }} />
+            <p className="text-xs" style={{ color: "var(--warn)" }}>{insights.riesgoPrincipal}</p>
           </div>
-          <div className="flex gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
-            <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-emerald-200">{insights.recomendacion}</p>
+          <div className="flex gap-2 bg-[var(--ok)]/10 border border-[var(--ok)]/20 rounded-[2px] p-3">
+            <TrendingUp className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--ok)" }} />
+            <p className="text-xs" style={{ color: "var(--ok)" }}>{insights.recomendacion}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
@@ -683,7 +693,7 @@ function ResultsPhase({ data }: { data: LicitacionData }) {
             { icon: Briefcase,  label: "Verificar requisitos críticos" },
             { icon: TrendingUp, label: "Preparar oferta técnica sólida" },
           ].map(({ icon: Icon, label }) => (
-            <span key={label} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-800/60 text-violet-300">
+            <span key={label} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-[2px] border border-[var(--brass)]/20 text-[var(--brass)]">
               <Icon className="w-3.5 h-3.5" /> {label}
             </span>
           ))}
@@ -744,11 +754,11 @@ export default function LicitacionesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 p-6 md:p-8">
+    <div className="min-h-screen bg-[var(--paper)] p-6 md:p-8">
       <div className="max-w-5xl mx-auto">
-        {!isSupabaseConfigured && <DemoNotice variant="dark" className="mb-4" />}
+        {!isSupabaseConfigured && <DemoNotice className="mb-4" />}
         {error && (
-          <div className="mb-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-2">
+          <div className="mb-4 p-4 rounded-[2px] bg-[var(--warn)]/10 border border-[var(--warn)]/30 text-sm flex items-center gap-2" style={{ color: "var(--warn)" }}>
             <AlertTriangle className="w-4 h-4 shrink-0" />
             {error}
           </div>

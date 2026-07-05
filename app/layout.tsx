@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${inter.variable} ${jetbrainsMono.variable} h-full`}>
-      <body className="h-full antialiased bg-slate-50 text-slate-900">
+      <body className="h-full antialiased bg-[var(--paper)] text-[var(--ink)]">
         {children}
       </body>
     </html>

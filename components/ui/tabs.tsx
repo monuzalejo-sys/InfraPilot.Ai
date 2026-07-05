@@ -9,7 +9,7 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
   return (
     <TabsPrimitive.List
       className={cn(
-        "inline-flex items-center gap-1 border-b border-slate-200 w-full",
+        "inline-flex items-center gap-1 border-b border-[var(--hairline)] w-full",
         className
       )}
       {...props}
@@ -21,9 +21,9 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-slate-500 border-b-2 border-transparent -mb-px transition-colors",
-        "hover:text-slate-700 hover:border-slate-300",
-        "data-[state=active]:text-indigo-600 data-[state=active]:border-indigo-600",
+        "inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-[var(--muted)] border-b-2 border-transparent -mb-px transition-colors",
+        "hover:text-[var(--ink)] hover:border-[var(--hairline)]",
+        "data-[state=active]:text-[var(--brass)] data-[state=active]:border-[var(--brass)]",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         className
       )}

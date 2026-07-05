@@ -10,10 +10,10 @@ export function DemoNotice({ variant = "light", className }: { variant?: "light"
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm",
+        "flex items-center gap-2 rounded-[2px] border px-4 py-2.5 text-sm",
         variant === "dark"
-          ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-          : "border-amber-200 bg-amber-50 text-amber-700",
+          ? "border-[var(--brass)]/40 bg-[var(--brass)]/10 text-[var(--brass)]"
+          : "border-[var(--warn)]/30 bg-[var(--warn)]/10 text-[var(--warn)]",
         className
       )}
     >
