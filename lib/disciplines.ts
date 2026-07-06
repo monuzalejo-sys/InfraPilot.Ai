@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 import {
   LayoutDashboard, Sparkles, FileText, Gavel, TrendingUp,
-  Bot, Database, Calculator, ScanText, Mountain, Truck,
+  Bot, Database, Calculator, ScanText, Mountain, Truck, Cpu,
 } from "lucide-react"
 
 export interface DisciplineModule {
@@ -43,6 +43,15 @@ export const DISCIPLINES: Discipline[] = [
       { href: "/topografia",   label: "Topografía",          icon: Mountain },
     ],
     units: ["m", "m2", "m3", "punto", "est"],
+  },
+  {
+    id: "informatica",
+    label: "Informática",
+    modules: [
+      { href: "/informatica", label: "Ing. Informática", icon: Cpu },
+    ],
+    categories: ["desarrollo", "infraestructura", "licencias", "servicios"],
+    units: ["hh", "sprint", "mes", "und", "usuario"],
   },
   {
     id: "licitaciones",
