@@ -38,3 +38,18 @@ export interface LectorResult {
   confianza: number // 0–1
   items: PriceItem[] | Apu[]
 }
+
+// ── Cotización mode (price_items only) ─────────────────────────
+// When applying price_items, the user can target each row at either
+// a brand-new price item (default, existing flow) or an existing one
+// as a multi-source quote (POST /api/quotes).
+export type ApplyMode = "new_items" | "quotes"
+
+// Minimal shape of a /api/prices search match, used to pick a quote target.
+export interface PriceItemMatch {
+  id: string
+  description: string
+  unit: string
+  unit_price: number
+  category: string
+}

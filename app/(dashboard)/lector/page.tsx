@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Sparkles, Trash2, ArrowRight, Loader2 } from "lucide-react"
+import { Sparkles, Trash2, ArrowRight, Loader2, Search } from "lucide-react"
 import { EditorialCard, MonoLabel } from "@/components/editorial"
 import { DemoNotice } from "@/components/demo-notice"
+import { MigrationNotice } from "@/components/migration-notice"
 import { isSupabaseConfigured } from "@/lib/supabase/client"
-import type { Apu, LectorResult, PriceItem } from "@/lib/lector-types"
+import type { Apu, ApplyMode, LectorResult, PriceItem, PriceItemMatch } from "@/lib/lector-types"
 
 // price_items category (Groq label) → DB Category enum used by /api/prices
 function toDbCategory(c?: string): "material" | "labor" | "equipment" {
@@ -20,6 +21,17 @@ function compToDbCategory(t: string): "material" | "labor" | "equipment" {
   if (t === "mano_obra") return "labor"
   if (t === "equipo") return "equipment"
   return "material"
+}
+
+// If the lector input was a URL, derive a short source label from its host.
+function sourceFromInput(rawInput: string): { source_name: string; source_url?: string } {
+  const trimmed = rawInput.trim()
+  try {
+    const url = new URL(trimmed)
+    return { source_name: url.hostname.replace(/^www\./, ""), source_url: url.toString() }
+  } catch {
+    return { source_name: "Lector IA" }
+  }
 }
 
 const EXAMPLES: Record<string, string> = {
@@ -46,13 +58,22 @@ export default function LectorPage() {
   const [result, setResult] = useState<LectorResult | null>(null)
   const [rows, setRows] = useState<Row[]>([])
   const [applying, setApplying] = useState(false)
-  const [applied, setApplied] = useState<{ count: number; kind: string } | null>(null)
+  const [applied, setApplied] = useState<{ count: number; kind: string; omitted?: number } | null>(null)
+  const [migrationRequired, setMigrationRequired] = useState(false)
+
+  // Cotización mode (price_items only): apply rows as quotes for existing
+  // items instead of creating new price_items.
+  const [applyMode, setApplyMode] = useState<ApplyMode>("new_items")
+  const [quoteTargets, setQuoteTargets] = useState<Record<number, PriceItemMatch | null>>({})
 
   const identify = async () => {
     setLoading(true)
     setError(null)
     setResult(null)
     setApplied(null)
+    setMigrationRequired(false)
+    setApplyMode("new_items")
+    setQuoteTargets({})
     try {
       const res = await fetch("/api/lector", {
         method: "POST",
@@ -86,9 +107,36 @@ export default function LectorPage() {
     if (!result) return
     setApplying(true)
     setError(null)
+    setMigrationRequired(false)
     let count = 0
+    let omitted = 0
     try {
-      if (result.kind === "price_items") {
+      if (result.kind === "price_items" && applyMode === "quotes") {
+        const { source_name, source_url } = sourceFromInput(input)
+        for (let i = 0; i < rows.length; i++) {
+          const target = quoteTargets[i]
+          if (!target) {
+            omitted++
+            continue
+          }
+          const r = rows[i] as unknown as PriceItem
+          const res = await fetch("/api/quotes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              price_item_id: target.id,
+              price: Number(r.price) || 0,
+              source_name,
+              source_url,
+            }),
+          })
+          if (res.ok) {
+            count++
+          } else if (res.status === 503) {
+            setMigrationRequired(true)
+          }
+        }
+      } else if (result.kind === "price_items") {
         for (const r of rows as unknown as PriceItem[]) {
           const res = await fetch("/api/prices", {
             method: "POST",
@@ -124,10 +172,10 @@ export default function LectorPage() {
           if (res.ok) count++
         }
       }
-      if (count === 0) {
+      if (count === 0 && !migrationRequired) {
         setError("No se pudo guardar. ¿Sesión iniciada? Revisa tu conexión a la base de datos.")
-      } else {
-        setApplied({ count, kind: result.kind })
+      } else if (count > 0) {
+        setApplied({ count, kind: result.kind, omitted: applyMode === "quotes" ? omitted : undefined })
       }
     } finally {
       setApplying(false)
@@ -135,7 +183,13 @@ export default function LectorPage() {
   }
 
   const isApu = result?.kind === "apus"
-  const canApply = isSupabaseConfigured && rows.length > 0 && result?.kind !== "unknown"
+  const isQuoteMode = result?.kind === "price_items" && applyMode === "quotes"
+  const quoteReadyCount = rows.filter((_, i) => quoteTargets[i]).length
+  const canApply =
+    isSupabaseConfigured &&
+    rows.length > 0 &&
+    result?.kind !== "unknown" &&
+    (!isQuoteMode || quoteReadyCount > 0)
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-8">
@@ -189,10 +243,16 @@ export default function LectorPage() {
         </div>
       )}
 
+      {migrationRequired && <MigrationNotice />}
+
       {applied && (
         <div className="flex flex-wrap items-center gap-3 rounded-[2px] border border-[var(--ok)]/30 bg-[var(--ok)]/10 px-4 py-3 text-sm text-[var(--ok)]">
           <span>
-            {applied.count} {applied.kind === "apus" ? "APU(s)" : "precio(s)"} aplicado(s) al sistema.
+            {applied.kind === "apus"
+              ? `${applied.count} APU(s) aplicado(s) al sistema.`
+              : applied.omitted !== undefined
+                ? `${applied.count} cotización(es) creada(s), ${applied.omitted} omitida(s) sin destino.`
+                : `${applied.count} precio(s) aplicado(s) al sistema.`}
           </span>
           <Link
             href={applied.kind === "apus" ? "/apus" : "/precios"}
@@ -219,14 +279,51 @@ export default function LectorPage() {
             </div>
           }
         >
+          {!isApu && (
+            <div className="mb-3 flex items-center gap-2">
+              <span className="mono-label">Aplicar como</span>
+              <div className="inline-flex rounded-[2px] border border-[var(--hairline)] p-0.5">
+                {(
+                  [
+                    { mode: "new_items" as const, label: "Items nuevos" },
+                    { mode: "quotes" as const, label: "Cotizaciones" },
+                  ]
+                ).map(({ mode, label }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setApplyMode(mode)}
+                    className={`rounded-[2px] px-2.5 py-1 text-xs transition-colors ${
+                      applyMode === mode
+                        ? "bg-[var(--brass)] text-[var(--paper)]"
+                        : "text-[var(--muted)] hover:text-[var(--ink)]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isApu ? (
             <ApuPreview rows={rows} update={updateCell} remove={removeRow} />
           ) : (
-            <PricePreview rows={rows} update={updateCell} remove={removeRow} />
+            <PricePreview
+              rows={rows}
+              update={updateCell}
+              remove={removeRow}
+              quoteMode={isQuoteMode}
+              quoteTargets={quoteTargets}
+              onTargetChange={(i, m) => setQuoteTargets((prev) => ({ ...prev, [i]: m }))}
+            />
           )}
 
           <div className="mt-4 flex items-center justify-between">
-            <span className="font-mono text-xs text-[var(--muted)]">{rows.length} fila(s)</span>
+            <span className="font-mono text-xs text-[var(--muted)]">
+              {rows.length} fila(s)
+              {isQuoteMode && ` · ${quoteReadyCount} con destino`}
+            </span>
             <button
               type="button"
               onClick={apply}
@@ -274,10 +371,16 @@ function PricePreview({
   rows,
   update,
   remove,
+  quoteMode = false,
+  quoteTargets = {},
+  onTargetChange,
 }: {
   rows: Row[]
   update: (i: number, key: string, v: unknown) => void
   remove: (i: number) => void
+  quoteMode?: boolean
+  quoteTargets?: Record<number, PriceItemMatch | null>
+  onTargetChange?: (i: number, match: PriceItemMatch | null) => void
 }) {
   return (
     <div className="overflow-x-auto">
@@ -287,7 +390,7 @@ function PricePreview({
             <th className={TH}>Descripción</th>
             <th className={`${TH} w-20`}>Und</th>
             <th className={`${TH} w-28 text-right`}>Precio</th>
-            <th className={`${TH} w-28`}>Categoría</th>
+            {quoteMode ? <th className={`${TH} w-56`}>Destino (item existente)</th> : <th className={`${TH} w-28`}>Categoría</th>}
             <th className="w-10 px-2 py-2" />
           </tr>
         </thead>
@@ -303,9 +406,19 @@ function PricePreview({
               <td className="px-1">
                 <Cell value={r.price} type="number" onChange={(v) => update(i, "price", v)} />
               </td>
-              <td className="px-1">
-                <Cell value={r.category} onChange={(v) => update(i, "category", v)} />
-              </td>
+              {quoteMode ? (
+                <td className="px-1">
+                  <TargetSearch
+                    initialQuery={String(r.name ?? "")}
+                    target={quoteTargets[i] ?? null}
+                    onSelect={(m) => onTargetChange?.(i, m)}
+                  />
+                </td>
+              ) : (
+                <td className="px-1">
+                  <Cell value={r.category} onChange={(v) => update(i, "category", v)} />
+                </td>
+              )}
               <td className="px-1 text-center">
                 <button
                   type="button"
@@ -320,6 +433,112 @@ function PricePreview({
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+// ── Compact debounced item search, used per-row in Cotización mode ────
+function TargetSearch({
+  initialQuery,
+  target,
+  onSelect,
+}: {
+  initialQuery: string
+  target: PriceItemMatch | null
+  onSelect: (match: PriceItemMatch | null) => void
+}) {
+  const [query, setQuery] = useState(initialQuery)
+  const [matches, setMatches] = useState<PriceItemMatch[]>([])
+  const [open, setOpen] = useState(false)
+  const [searching, setSearching] = useState(false)
+
+  const queryTooShort = query.trim().length < 2
+
+  useEffect(() => {
+    if (target || queryTooShort) return
+    let cancelled = false
+    const timer = setTimeout(() => {
+      setSearching(true)
+      fetch(`/api/prices?q=${encodeURIComponent(query.trim())}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (!cancelled) setMatches((json?.items ?? []) as PriceItemMatch[])
+        })
+        .catch(() => {
+          if (!cancelled) setMatches([])
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false)
+        })
+    }, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [query, queryTooShort, target])
+
+  if (target) {
+    return (
+      <div className="flex items-center gap-1.5 rounded-[2px] border border-[var(--brass)] bg-[var(--brass)]/10 px-2 py-1 text-xs">
+        <span className="flex-1 truncate text-[var(--ink)]">{target.description}</span>
+        <span className="font-mono text-[var(--muted)]">{target.unit}</span>
+        <button
+          type="button"
+          onClick={() => {
+            onSelect(null)
+            setQuery(initialQuery)
+          }}
+          className="text-[var(--muted)] hover:text-[var(--warn)]"
+          aria-label="Cambiar destino"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-1 rounded-[2px] border border-[var(--hairline)] bg-[var(--paper)] px-1.5 py-1">
+        <Search className="h-3 w-3 shrink-0 text-[var(--muted)]" />
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setOpen(true)
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Buscar item…"
+          className="w-full min-w-0 bg-transparent text-xs text-[var(--ink)] outline-none"
+        />
+        {searching && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-[var(--muted)]" />}
+      </div>
+      {open && !queryTooShort && matches.length > 0 && (
+        <ul className="absolute z-10 mt-1 max-h-48 w-full min-w-[14rem] overflow-y-auto rounded-[2px] border border-[var(--hairline)] bg-[var(--paper)] shadow-md">
+          {matches.map((m) => (
+            <li key={m.id}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onSelect(m)
+                  setOpen(false)
+                }}
+                className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-[var(--ink)] hover:bg-[var(--brass)]/10"
+              >
+                <span className="flex-1 truncate">{m.description}</span>
+                <span className="font-mono text-[var(--muted)]">{m.unit}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && !searching && !queryTooShort && matches.length === 0 && (
+        <div className="absolute z-10 mt-1 w-full rounded-[2px] border border-[var(--hairline)] bg-[var(--paper)] px-2 py-1.5 text-xs text-[var(--muted)] shadow-md">
+          Sin coincidencias
+        </div>
+      )}
     </div>
   )
 }

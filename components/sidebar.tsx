@@ -4,13 +4,11 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import {
-  LayoutDashboard, Sparkles, FileText, Gavel, TrendingUp,
-  Bot, Building2, Plus, LogOut, Menu, X,
-  Database, Calculator, ScanText, Mountain,
+  Building2, Plus, LogOut, Menu, X,
 } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { getNavSections, type DisciplineModule } from "@/lib/disciplines"
 
 interface UserInfo {
   email?: string
@@ -18,46 +16,9 @@ interface UserInfo {
   company?: string
 }
 
-interface NavItem {
-  href: string
-  label: string
-  icon: LucideIcon
-  isAi?: boolean
-  disabled?: boolean
-}
+type NavItem = DisciplineModule
 
-const navSections: { label: string; items: NavItem[] }[] = [
-  {
-    label: "Workspace",
-    items: [
-      { href: "/dashboard",    label: "Dashboard",           icon: LayoutDashboard },
-      { href: "/cotizador",    label: "Cotizador IA",        icon: Sparkles,   isAi: true },
-      { href: "/presupuestos", label: "Presupuestos",        icon: FileText },
-      { href: "/precios",      label: "Base de Precios",     icon: Database },
-      { href: "/apus",         label: "APUs",                icon: Calculator },
-    ],
-  },
-  {
-    label: "Campo",
-    items: [
-      { href: "/lector",       label: "Lector de datos",     icon: ScanText },
-      { href: "/topografia",   label: "Topografía",          icon: Mountain },
-    ],
-  },
-  {
-    label: "Licitaciones",
-    items: [
-      { href: "/licitaciones", label: "Licitaciones",        icon: Gavel,      isAi: true },
-    ],
-  },
-  {
-    label: "Análisis",
-    items: [
-      { href: "/predictor",    label: "Predictor Financiero", icon: TrendingUp },
-      { href: "/copiloto",     label: "Copiloto IA",          icon: Bot,        isAi: true, disabled: true },
-    ],
-  },
-]
+const navSections = getNavSections()
 
 // ── Compact dark icon rail (desktop) — hover reveals labels ──────
 function RailItem({ item, isActive, onClose }: {
