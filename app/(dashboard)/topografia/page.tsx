@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from "react"
 import {
   Mountain, Ruler, Calculator, Download, Plus, Trash2,
-  TriangleAlert, CircleCheckBig, Upload, Layers,
+  TriangleAlert, CircleCheckBig, Upload, Layers, Waypoints,
+  FileSpreadsheet,
 } from "lucide-react"
 import { Crosshair, Pin, MonoLabel } from "@/components/editorial"
 import {
@@ -15,8 +16,14 @@ import {
   nivelar,
   type LevelStation, type NivelacionResult,
 } from "@/lib/topo/nivelacion"
+import {
+  calcularPoligonal,
+  type PolyStation, type PoligonalResult, type AngleUnit,
+} from "@/lib/topo/poligonal"
+import { crearLibroConFormulas } from "@/lib/excel-export"
+import { ProfesionQuips } from "@/components/profesion-quips"
 
-type Tab = "cubicacion" | "nivelacion"
+type Tab = "cubicacion" | "nivelacion" | "poligonal"
 
 // ── Dataset de ejemplo: ~20 puntos de un levantamiento realista (loma suave) ──
 // Coordenadas locales (m). Cota entre ~99.4 y ~101.8 sobre una plataforma 40×40.
@@ -51,8 +58,36 @@ const SAMPLE_LEVEL: LevelStation[] = [
   { name: "BM-1", foresight: 2.766, distance: 38 },
 ]
 
+// ── Ejemplo de poligonal cerrada REAL (derivada de un pentágono medido en obra) ──
+// 5 vértices recorridos en sentido horario, ángulos internos sexagesimales.
+// Σ observada = 540.0036° → Eα ≈ +13″ (dentro de ±30″·√5). Cierre lineal ~7 cm,
+// precisión ≈ 1/11700, área ≈ 4.37 ha. Sirve para verificar toda la compensación.
+const SAMPLE_POLY: PolyStation[] = [
+  { name: "E-1", angle: 85.0788, distance: 172.66 },
+  { name: "E-2", angle: 124.9912, distance: 169.66 },
+  { name: "E-3", angle: 92.4909, distance: 162.83 },
+  { name: "E-4", angle: 109.3107, distance: 152.30 },
+  { name: "E-5", angle: 128.1320, distance: 155.30 },
+]
+const SAMPLE_POLY_AZ0 = "349.9920"
+const SAMPLE_POLY_E0 = "1000.000"
+const SAMPLE_POLY_N0 = "1000.000"
+
 const fmt = (n: number, d = 2) =>
   n.toLocaleString("es-CO", { minimumFractionDigits: d, maximumFractionDigits: d })
+
+// Grados decimales → "GG°MM′SS″" para lectura de topógrafo.
+function toDMS(deg: number): string {
+  const sign = deg < 0 ? "−" : ""
+  let x = Math.abs(deg)
+  let g = Math.floor(x)
+  x = (x - g) * 60
+  let m = Math.floor(x)
+  let s = (x - m) * 60
+  if (s >= 59.995) { s = 0; m += 1 }
+  if (m >= 60) { m = 0; g += 1 }
+  return `${sign}${g}°${String(m).padStart(2, "0")}′${s.toFixed(2).padStart(5, "0")}″`
+}
 
 function downloadBlob(filename: string, content: string) {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" })
@@ -566,6 +601,369 @@ function NivelacionPanel() {
   )
 }
 
+// ═══════════════════════════ POLIGONAL ═════════════════════════════════════
+function PoligonalPanel() {
+  const [az0, setAz0] = useState("0.0000")
+  const [east0, setEast0] = useState("1000.000")
+  const [north0, setNorth0] = useState("1000.000")
+  const [unit, setUnit] = useState<AngleUnit>("deg")
+  const [tolSec, setTolSec] = useState("30")
+  const [stations, setStations] = useState<PolyStation[]>([
+    { name: "E-1", angle: NaN, distance: NaN },
+    { name: "E-2", angle: NaN, distance: NaN },
+    { name: "E-3", angle: NaN, distance: NaN },
+  ])
+  const [result, setResult] = useState<PoligonalResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const update = (i: number, field: keyof PolyStation, value: string) => {
+    setStations((prev) =>
+      prev.map((s, idx) => {
+        if (idx !== i) return s
+        if (field === "name") return { ...s, name: value }
+        const n = value.trim() === "" ? NaN : Number(value.replace(",", "."))
+        return { ...s, [field]: n }
+      }),
+    )
+  }
+
+  const addRow = () =>
+    setStations((prev) => [...prev, { name: `E-${prev.length + 1}`, angle: NaN, distance: NaN }])
+  const removeRow = (i: number) =>
+    setStations((prev) => (prev.length <= 3 ? prev : prev.filter((_, idx) => idx !== i)))
+
+  const loadSample = () => {
+    setAz0(SAMPLE_POLY_AZ0)
+    setEast0(SAMPLE_POLY_E0)
+    setNorth0(SAMPLE_POLY_N0)
+    setUnit("deg")
+    setTolSec("30")
+    setStations(SAMPLE_POLY.map((s) => ({ ...s })))
+    setResult(null)
+    setError(null)
+  }
+
+  const calc = () => {
+    setError(null)
+    const azimuth = Number(String(az0).replace(",", "."))
+    const e0 = Number(String(east0).replace(",", "."))
+    const n0 = Number(String(north0).replace(",", "."))
+    if (!Number.isFinite(azimuth)) { setError("El azimut inicial no es válido."); return }
+    if (!Number.isFinite(e0) || !Number.isFinite(n0)) { setError("Las coordenadas de partida no son válidas."); return }
+    if (stations.some((s) => !Number.isFinite(s.angle) || !Number.isFinite(s.distance))) {
+      setError("Completa el ángulo y la distancia de cada vértice."); return
+    }
+    const a = Number(String(tolSec).replace(",", "."))
+    try {
+      setResult(calcularPoligonal({
+        stations,
+        initialAzimuth: azimuth,
+        startEast: e0,
+        startNorth: n0,
+        angleUnit: unit,
+        toleranceSec: a > 0 ? a : undefined,
+      }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error en el cálculo.")
+      setResult(null)
+    }
+  }
+
+  const exportResult = () => {
+    if (!result) return
+    const rows = result.rows.map((r) => [
+      r.name,
+      fmt(r.angleAdjusted, 6),
+      fmt(r.azimuth, 6),
+      fmt(r.distance, 3),
+      fmt(r.deltaE, 4),
+      fmt(r.deltaN, 4),
+      fmt(r.correctionE, 4),
+      fmt(r.correctionN, 4),
+      fmt(r.east, 4),
+      fmt(r.north, 4),
+    ])
+    downloadBlob(
+      "poligonal.csv",
+      toCsv(
+        ["Vertice", "Angulo_comp", "Azimut", "Distancia", "dE", "dN", "corrE", "corrN", "Este", "Norte"],
+        rows,
+      ),
+    )
+  }
+
+  // Las proyecciones se exportan como FÓRMULA =dist*SIN(RADIANES(az)) para
+  // que el cliente recalcule al cambiar distancias/azimuts en Excel.
+  const exportExcel = () => {
+    if (!result) return
+    const celdas: Record<string, string | number | { f: string }> = {}
+    celdas["A1"] = "Vertice"; celdas["B1"] = "Angulo"; celdas["C1"] = "Azimut"
+    celdas["D1"] = "Distancia"; celdas["E1"] = "dE"; celdas["F1"] = "dN"; celdas["G1"] = "Este"; celdas["H1"] = "Norte"
+    result.rows.forEach((r, i) => {
+      const row = i + 2
+      celdas[`A${row}`] = r.name
+      celdas[`B${row}`] = r.angleAdjusted
+      celdas[`C${row}`] = r.azimuth            // valor (az corrido ya resuelto)
+      celdas[`D${row}`] = r.distance
+      celdas[`E${row}`] = { f: `D${row}*SIN(RADIANES(C${row}))` } // ΔE = d·sen(Az)
+      celdas[`F${row}`] = { f: `D${row}*COS(RADIANES(C${row}))` } // ΔN = d·cos(Az)
+      celdas[`G${row}`] = r.east
+      celdas[`H${row}`] = r.north
+    })
+    crearLibroConFormulas(
+      [{ nombre: "Poligonal", celdas, anchosColumnas: [10, 14, 14, 12, 14, 14, 14, 14] }],
+      "poligonal.xlsx",
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Parámetros + tabla editable */}
+      <section className="editorial-card relative p-5">
+        <Crosshair className="pointer-events-none absolute right-2 top-2 h-3 w-3 text-[var(--hairline)]" />
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <MonoLabel>Poligonal cerrada · ángulos internos</MonoLabel>
+            <span className="mono-label text-[var(--muted)]">ESC 1:500 · GSD —</span>
+          </div>
+          <button
+            onClick={loadSample}
+            className="mono-label rounded-[2px] border border-[var(--hairline)] px-2.5 py-1 text-[var(--ink)] transition-colors hover:border-[var(--brass)] hover:text-[var(--brass)]"
+          >
+            Cargar ejemplo
+          </button>
+        </div>
+
+        <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div>
+            <MonoLabel>Azimut inicial (°)</MonoLabel>
+            <input
+              value={az0}
+              onChange={(e) => setAz0(e.target.value)}
+              inputMode="decimal"
+              className="mt-1.5 h-9 w-full rounded-[2px] border border-[var(--hairline)] bg-white px-3 font-mono text-sm text-[var(--ink)] outline-none focus:border-[var(--brass)]"
+            />
+          </div>
+          <div>
+            <MonoLabel>Este partida (m)</MonoLabel>
+            <input
+              value={east0}
+              onChange={(e) => setEast0(e.target.value)}
+              inputMode="decimal"
+              className="mt-1.5 h-9 w-full rounded-[2px] border border-[var(--hairline)] bg-white px-3 font-mono text-sm text-[var(--ink)] outline-none focus:border-[var(--brass)]"
+            />
+          </div>
+          <div>
+            <MonoLabel>Norte partida (m)</MonoLabel>
+            <input
+              value={north0}
+              onChange={(e) => setNorth0(e.target.value)}
+              inputMode="decimal"
+              className="mt-1.5 h-9 w-full rounded-[2px] border border-[var(--hairline)] bg-white px-3 font-mono text-sm text-[var(--ink)] outline-none focus:border-[var(--brass)]"
+            />
+          </div>
+          <div>
+            <MonoLabel>Unidad angular</MonoLabel>
+            <select
+              value={unit}
+              onChange={(e) => setUnit(e.target.value as AngleUnit)}
+              className="mt-1.5 h-9 w-full rounded-[2px] border border-[var(--hairline)] bg-white px-2 font-mono text-sm text-[var(--ink)] outline-none focus:border-[var(--brass)]"
+            >
+              <option value="deg">Sexagesimal (°)</option>
+              <option value="gon">Centesimal (gon)</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-sm">
+            <thead>
+              <tr className="text-left">
+                {["Vértice", unit === "gon" ? "Áng. int. (gon)" : "Áng. int. (°)", "Distancia (m)", ""].map((h) => (
+                  <th key={h} className="mono-label pb-2 pr-3 font-normal">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="font-mono">
+              {stations.map((s, i) => (
+                <tr key={i} className="border-t border-[var(--hairline)]">
+                  <td className="py-1.5 pr-2">
+                    <input
+                      value={s.name}
+                      onChange={(e) => update(i, "name", e.target.value)}
+                      placeholder={`E-${i + 1}`}
+                      className="h-8 w-full rounded-[2px] border border-[var(--hairline)] bg-white px-2 text-xs text-[var(--ink)] outline-none focus:border-[var(--brass)]"
+                    />
+                  </td>
+                  {(["angle", "distance"] as const).map((field) => (
+                    <td key={field} className="py-1.5 pr-2">
+                      <input
+                        value={Number.isFinite(s[field]) ? s[field] : ""}
+                        onChange={(e) => update(i, field, e.target.value)}
+                        inputMode="decimal"
+                        className="h-8 w-full rounded-[2px] border border-[var(--hairline)] bg-white px-2 text-right text-xs text-[var(--ink)] outline-none focus:border-[var(--brass)]"
+                      />
+                    </td>
+                  ))}
+                  <td className="py-1.5">
+                    <button
+                      onClick={() => removeRow(i)}
+                      disabled={stations.length <= 3}
+                      title="Quitar vértice"
+                      className="flex h-8 w-8 items-center justify-center rounded-[2px] text-[var(--muted)] transition-colors hover:text-[var(--warn)] disabled:opacity-30"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            onClick={addRow}
+            className="mono-label flex items-center gap-1.5 rounded-[2px] border border-[var(--hairline)] px-2.5 py-1.5 text-[var(--ink)] transition-colors hover:border-[var(--brass)] hover:text-[var(--brass)]"
+          >
+            <Plus className="h-3.5 w-3.5" /> Agregar vértice
+          </button>
+          <div className="flex items-center gap-1.5">
+            <span className="mono-label text-[var(--muted)]">Tol. a (″)</span>
+            <input
+              value={tolSec}
+              onChange={(e) => setTolSec(e.target.value)}
+              inputMode="decimal"
+              title="Tolerancia angular T = ±a·√n"
+              className="h-8 w-16 rounded-[2px] border border-[var(--hairline)] bg-white px-2 text-right font-mono text-xs text-[var(--ink)] outline-none focus:border-[var(--brass)]"
+            />
+          </div>
+          <button
+            onClick={calc}
+            className="flex items-center gap-2 rounded-[2px] bg-[var(--brass)] px-4 py-1.5 text-sm font-semibold text-[var(--paper)] transition-opacity hover:opacity-90"
+          >
+            <Calculator className="h-4 w-4" /> Calcular
+          </button>
+        </div>
+
+        {error && (
+          <div className="mt-4 flex items-start gap-2 rounded-[2px] border border-[var(--warn)]/40 bg-[var(--warn)]/8 px-3 py-2 text-xs" style={{ color: "var(--warn)" }}>
+            <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+      </section>
+
+      {/* Resultados */}
+      {result && (
+        <section className="animate-fade-in space-y-5">
+          {/* Veredicto angular */}
+          <div
+            className="flex items-center gap-3 rounded-[2px] border p-4"
+            style={{
+              borderColor: result.angularWithinTolerance ? "var(--ok)" : "var(--warn)",
+              color: result.angularWithinTolerance ? "var(--ok)" : "var(--warn)",
+              background: result.angularWithinTolerance ? "rgba(91,122,94,0.06)" : "rgba(168,98,59,0.06)",
+            }}
+          >
+            {result.angularWithinTolerance
+              ? <CircleCheckBig className="h-5 w-5 shrink-0" />
+              : <TriangleAlert className="h-5 w-5 shrink-0" />}
+            <div>
+              <p className="text-sm font-semibold">
+                {result.angularWithinTolerance ? "Cierre angular dentro de tolerancia" : "Cierre angular fuera de tolerancia"}
+              </p>
+              <p className="font-mono text-xs opacity-90">
+                Eα {fmt(result.angularErrorSec, 1)}″ · Tolerancia ±{fmt(result.toleranceSec, 1)}″ (a·√{result.n}) · corrección {fmt(result.angularCorrectionPerStation, 2)}″/vértice
+              </p>
+            </div>
+          </div>
+
+          {/* Cierre lineal + precisión + área en cards grandes */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard label="Error lineal ε" value={fmt(result.linearError, 4)} unit="m" tone={result.linearError < 0.05 ? "ok" : "warn"} />
+            <StatCard
+              label="Precisión relativa"
+              value={result.relativePrecision === Infinity ? "exacta" : `1 / ${fmt(result.relativePrecision, 0)}`}
+              tone="brass"
+            />
+            <StatCard label="Perímetro" value={fmt(result.perimeter, 2)} unit="m" />
+            <StatCard label="Área (coords)" value={fmt(result.area, 2)} unit="m²" tone="brass" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatCard label="εE (cierre Este)" value={fmt(result.closureE, 4)} unit="m" />
+            <StatCard label="εN (cierre Norte)" value={fmt(result.closureN, 4)} unit="m" />
+            <StatCard label="Σ áng. observada" value={`${fmt(result.sumAnglesObserved, 4)}°`} />
+          </div>
+
+          {/* Tabla compensada */}
+          <div className="editorial-card relative p-5">
+            <Crosshair className="pointer-events-none absolute right-2 top-2 h-3 w-3 text-[var(--hairline)]" />
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <MonoLabel>Cuadro de coordenadas compensadas</MonoLabel>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exportExcel}
+                  className="mono-label flex items-center gap-1.5 rounded-[2px] border border-[var(--hairline)] px-2.5 py-1 text-[var(--ink)] transition-colors hover:border-[var(--brass)] hover:text-[var(--brass)]"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" /> Descargar Excel
+                </button>
+                <button
+                  onClick={exportResult}
+                  className="mono-label flex items-center gap-1.5 rounded-[2px] border border-[var(--hairline)] px-2.5 py-1 text-[var(--ink)] transition-colors hover:border-[var(--brass)] hover:text-[var(--brass)]"
+                >
+                  <Download className="h-3.5 w-3.5" /> Descargar CSV
+                </button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead>
+                  <tr className="text-left">
+                    {["Vértice", "Áng. comp.", "Azimut", "Dist.", "ΔE", "ΔN", "cE", "cN", "Este", "Norte"].map((h) => (
+                      <th key={h} className="mono-label pb-2 pr-3 font-normal">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="font-mono text-xs">
+                  {result.rows.map((r, i) => (
+                    <tr key={i} className="border-t border-[var(--hairline)]">
+                      <td className="py-2 pr-3 font-sans text-[var(--ink)]">{r.name}</td>
+                      <td className="py-2 pr-3 text-right text-[var(--muted)]">{toDMS(r.angleAdjusted)}</td>
+                      <td className="py-2 pr-3 text-right text-[var(--muted)]">{toDMS(r.azimuth)}</td>
+                      <td className="py-2 pr-3 text-right text-[var(--muted)]">{fmt(r.distance, 3)}</td>
+                      <td className="py-2 pr-3 text-right text-[var(--muted)]">{fmt(r.deltaE, 3)}</td>
+                      <td className="py-2 pr-3 text-right text-[var(--muted)]">{fmt(r.deltaN, 3)}</td>
+                      <td className="py-2 pr-3 text-right" style={{ color: "var(--brass)" }}>{fmt(r.correctionE, 4)}</td>
+                      <td className="py-2 pr-3 text-right" style={{ color: "var(--brass)" }}>{fmt(r.correctionN, 4)}</td>
+                      <td className="py-2 pr-3 text-right font-semibold text-[var(--ink)]">{fmt(r.east, 3)}</td>
+                      <td className="py-2 text-right font-semibold text-[var(--ink)]">{fmt(r.north, 3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {result.warnings.length > 0 && (
+            <div className="rounded-[2px] border border-[var(--hairline)] bg-[var(--card)] p-4">
+              <ul className="space-y-1.5 text-xs leading-relaxed text-[var(--muted)]">
+                {result.warnings.map((w, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-[var(--brass)]">·</span>
+                    <span>{w}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  )
+}
+
 // ═══════════════════════════ PÁGINA ════════════════════════════════════════
 export default function TopografiaPage() {
   const [tab, setTab] = useState<Tab>("cubicacion")
@@ -580,10 +978,10 @@ export default function TopografiaPage() {
         </div>
         <h1 className="flex items-center gap-2.5 text-xl font-semibold tracking-tight text-[var(--ink)]">
           <Mountain className="h-5 w-5 text-[var(--brass)]" />
-          Cubicación y nivelación
+          Cubicación, nivelación y poligonal
         </h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Corte/relleno desde puntos y nivelación cerrada — todo el cálculo se ejecuta en tu navegador.
+          Corte/relleno, nivelación cerrada y poligonal compensada — todo el cálculo se ejecuta en tu navegador.
         </p>
       </header>
 
@@ -592,6 +990,7 @@ export default function TopografiaPage() {
         {([
           { id: "cubicacion", label: "Cubicación", icon: Layers },
           { id: "nivelacion", label: "Nivelación", icon: Ruler },
+          { id: "poligonal", label: "Poligonal", icon: Waypoints },
         ] as const).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -602,13 +1001,22 @@ export default function TopografiaPage() {
             <Icon className="h-4 w-4" style={{ color: tab === id ? "var(--brass)" : "var(--muted)" }} />
             {label}
             {tab === id && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 bg-[var(--brass)]" />
+              <>
+                <Crosshair className="h-3 w-3 text-[var(--brass)]/60" />
+                <span className="absolute inset-x-0 -bottom-px h-0.5 bg-[var(--brass)]" />
+              </>
             )}
           </button>
         ))}
       </div>
 
-      {tab === "cubicacion" ? <CubicacionPanel /> : <NivelacionPanel />}
+      {tab === "cubicacion" && <CubicacionPanel />}
+      {tab === "nivelacion" && <NivelacionPanel />}
+      {tab === "poligonal" && <PoligonalPanel />}
+
+      <div className="mt-10">
+        <ProfesionQuips discipline="topografia" />
+      </div>
     </div>
   )
 }

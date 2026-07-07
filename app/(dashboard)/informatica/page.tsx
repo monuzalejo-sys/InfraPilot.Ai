@@ -5,6 +5,7 @@ import {
   Cpu, Cloud, Calculator, Download, Plus, Trash2, TriangleAlert,
 } from "lucide-react"
 import { Crosshair, Pin, MonoLabel } from "@/components/editorial"
+import { ProfesionQuips } from "@/components/profesion-quips"
 import {
   calcularEstimacion, calcularPuntosFuncion,
   type Rol, type FaseProyecto, type ConteosPF,
@@ -823,6 +824,8 @@ export default function InformaticaPage() {
       </div>
 
       {tab === "estimacion" ? <EstimacionPanel /> : <CloudPanel />}
+
+      <ProfesionQuips discipline="informatica" className="mt-6" />
     </div>
   )
 }

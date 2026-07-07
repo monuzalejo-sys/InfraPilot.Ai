@@ -6,7 +6,11 @@
    Tokens: var(--paper) var(--ink) var(--muted) var(--brass)
            var(--hairline) var(--card) var(--ok) var(--warn) */
 
+import { useState } from "react"
+import Link from "next/link"
+import { ChevronRight, ArrowUpRight } from "lucide-react"
 import { EditorialCard, MonoLabel } from "@/components/editorial"
+import { DISCIPLINES } from "@/lib/disciplines"
 
 // ── Topographic contour map (decorative) ─────────────────────────
 // Concentric level curves in hairline/muted, one brass "surveyed" tick.
@@ -184,6 +188,110 @@ export function ChipRiesgoIA({
         <p className="mt-1.5 text-sm leading-relaxed text-[var(--ink)]">{message}</p>
         <p className="mt-2 font-mono text-[10px] uppercase tracking-wide text-[var(--muted)]">{model}</p>
       </div>
+    </div>
+  )
+}
+
+// (d) HubIngenierias — plataforma multi-ingeniería ─────────────────
+// Una card por disciplina del registry; click → accordion (una a la
+// vez) que despliega sus modules con acceso directo. Numeración mono
+// editorial 01/02/03, único color de acción brass.
+export function HubIngenierias() {
+  const [openId, setOpenId] = useState<string | null>(null)
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {DISCIPLINES.map((discipline, di) => {
+        const open = openId === discipline.id
+        const Icon = discipline.modules[0]?.icon
+        const count = discipline.modules.length
+        return (
+          <section
+            key={discipline.id}
+            className={`editorial-card relative flex flex-col p-5 transition-colors ${
+              open ? "sm:col-span-2 xl:col-span-3" : ""
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => setOpenId(open ? null : discipline.id)}
+              aria-expanded={open}
+              className="group flex w-full items-start gap-4 text-left"
+            >
+              {Icon && (
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-[var(--hairline)] transition-colors group-hover:border-[var(--brass)]">
+                  <Icon className="h-5 w-5 text-[var(--brass)]" />
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] tabular-nums text-[var(--muted)]">
+                    {String(di + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="truncate text-base font-semibold tracking-tight text-[var(--ink)] transition-colors group-hover:text-[var(--brass)]">
+                    {discipline.label}
+                  </h3>
+                </div>
+                {discipline.description && (
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">
+                    {discipline.description}
+                  </p>
+                )}
+                <p className="mt-2 font-mono text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                  {count} {count === 1 ? "herramienta" : "herramientas"}
+                </p>
+              </div>
+              <ChevronRight
+                className={`mt-0.5 h-4 w-4 shrink-0 text-[var(--muted)] transition-transform ${
+                  open ? "rotate-90 text-[var(--brass)]" : ""
+                }`}
+              />
+            </button>
+
+            {open && (
+              <ul className="animate-fade-in-up mt-4 divide-y divide-[var(--hairline)] border-t border-[var(--hairline)]">
+                {discipline.modules.map((m, mi) => {
+                  const ModuleIcon = m.icon
+                  const row = (
+                    <>
+                      <span className="font-mono text-[10px] tabular-nums text-[var(--muted)]">
+                        {String(mi + 1).padStart(2, "0")}
+                      </span>
+                      <ModuleIcon className="h-4 w-4 shrink-0 text-[var(--muted)] group-hover/mod:text-[var(--brass)]" />
+                      <span className="min-w-0 flex-1 truncate text-sm text-[var(--ink)]">
+                        {m.label}
+                      </span>
+                      {m.disabled ? (
+                        <span className="font-mono text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                          Próximamente
+                        </span>
+                      ) : (
+                        <ArrowUpRight className="h-4 w-4 shrink-0 text-[var(--muted)] group-hover/mod:text-[var(--brass)]" />
+                      )}
+                    </>
+                  )
+                  return (
+                    <li key={m.href}>
+                      {m.disabled ? (
+                        <div className="group/mod flex items-center gap-3 py-3 opacity-50">
+                          {row}
+                        </div>
+                      ) : (
+                        <Link
+                          href={m.href}
+                          className="group/mod flex items-center gap-3 py-3 transition-colors"
+                        >
+                          {row}
+                        </Link>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+        )
+      })}
     </div>
   )
 }

@@ -3,15 +3,14 @@
 import { useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import {
-  FolderOpen, Banknote, Gavel, Sparkles,
-  TrendingUp, ChevronRight,
+  FolderOpen, Gavel, Sparkles, ChevronRight,
 } from "lucide-react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { formatCurrency, getGreeting, timeAgo } from "@/lib/utils"
 import { DemoNotice } from "@/components/demo-notice"
 import { EditorialCard, MonoLabel, Crosshair } from "@/components/editorial"
 import {
-  RadarPrecios, TimelineLicitaciones, ChipRiesgoIA,
+  RadarPrecios, TimelineLicitaciones, ChipRiesgoIA, HubIngenierias,
   type PriceRow, type TimelinePoint,
 } from "@/components/dashboard-widgets"
 
@@ -126,12 +125,10 @@ export default function DashboardPage() {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }).format(new Date())
 
-  const totalBudget = projects.reduce((s, p) => s + (p.total_budget ?? 0), 0)
   const firstName = user?.full_name?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Usuario"
 
   const stats = [
     { icon: FolderOpen, label: "Proyectos activos", value: loading ? "—" : String(projects.length) },
-    { icon: Banknote,   label: "Presupuesto total", value: loading ? "—" : totalBudget > 0 ? `S/ ${(totalBudget / 1000000).toFixed(1)}M` : "S/ 0" },
     { icon: Sparkles,   label: "Presupuestos IA",   value: loading ? "—" : String(recentBudgets.length) },
     { icon: Gavel,      label: "Licitaciones",      value: "0" },
   ]
@@ -140,71 +137,53 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-7xl space-y-8 p-6 sm:p-8">
       {(!isSupabaseConfigured || fetchError) && <DemoNotice />}
 
-      {/* Header */}
-      <header className="flex flex-col gap-4 border-b border-[var(--hairline)] pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <MonoLabel>Tablero de control</MonoLabel>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--ink)]">
-            {getGreeting()}, {firstName}
-          </h1>
-          <p className="mt-1 font-mono text-xs uppercase tracking-wide text-[var(--muted)]">{today}</p>
+      {/* Header — saludo + fecha + stats compactos en una fila */}
+      <header className="flex flex-col gap-5 border-b border-[var(--hairline)] pb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <MonoLabel>Tablero de control</MonoLabel>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--ink)]">
+              {getGreeting()}, {firstName}
+            </h1>
+            <p className="mt-1 font-mono text-xs uppercase tracking-wide text-[var(--muted)]">{today}</p>
+          </div>
+          <Link
+            href="/cotizador"
+            className="inline-flex items-center gap-2 self-start rounded-sm bg-[var(--brass)] px-5 py-2.5 text-sm font-semibold text-[var(--paper)] transition-opacity hover:opacity-90 sm:self-auto"
+          >
+            <Sparkles className="h-4 w-4" />
+            Nuevo presupuesto
+          </Link>
         </div>
-        <Link
-          href="/cotizador"
-          className="inline-flex items-center gap-2 self-start rounded-sm bg-[var(--brass)] px-5 py-2.5 text-sm font-semibold text-[var(--paper)] transition-opacity hover:opacity-90 sm:self-auto"
-        >
-          <Sparkles className="h-4 w-4" />
-          Nuevo presupuesto
-        </Link>
+
+        {/* Stats compactos — inline sobre el hairline */}
+        <div className="grid grid-cols-3 divide-x divide-[var(--hairline)] rounded-sm border border-[var(--hairline)]">
+          {stats.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-center gap-3 px-4 py-3">
+              <Icon className="h-4 w-4 shrink-0 text-[var(--brass)]" />
+              <div className="min-w-0">
+                <div className="text-xl font-bold tracking-tight tabular-nums text-[var(--ink)]">{value}</div>
+                <MonoLabel className="mt-0.5 truncate">{label}</MonoLabel>
+              </div>
+            </div>
+          ))}
+        </div>
       </header>
 
-      {/* Stats — big Inter numbers over mono labels */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map(({ icon: Icon, label, value }) => (
-          <EditorialCard key={label}>
-            <div className="flex items-start justify-between">
-              <Icon className="h-5 w-5 text-[var(--brass)]" />
-            </div>
-            <div className="mt-4 text-3xl font-bold tracking-tight tabular-nums text-[var(--ink)]">
-              {value}
-            </div>
-            <MonoLabel className="mt-1">{label}</MonoLabel>
-          </EditorialCard>
-        ))}
-      </div>
+      {/* Sección protagonista — hub de ingenierías */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <MonoLabel>Ingenierías</MonoLabel>
+          <MonoLabel className="text-[var(--muted)]">Plataforma multi-ingeniería</MonoLabel>
+        </div>
+        <HubIngenierias />
+      </section>
 
-      {/* Widgets row */}
+      {/* Widgets secundarios bajo el hub — compactados */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <RadarPrecios rows={priceRows} updatedLabel="Ref · hoy" />
         <TimelineLicitaciones points={licitacionTimeline} caption="6 meses" />
-        <div className="space-y-4">
-          <ChipRiesgoIA message="Sobrecosto en cimentación proyectado: el precio del acero fy=4200 supera el margen del presupuesto INF-024 en 6.2%. Revisa la partida 02.01." />
-          <EditorialCard title="Acciones rápidas">
-            <div className="space-y-2">
-              <Link
-                href="/cotizador"
-                className="flex items-center gap-2.5 rounded-sm bg-[var(--brass)] px-3 py-2 text-sm font-medium text-[var(--paper)] transition-opacity hover:opacity-90"
-              >
-                <Sparkles className="h-4 w-4" />
-                Cotizar obra con IA
-              </Link>
-              <Link
-                href="/predictor"
-                className="flex items-center gap-2.5 rounded-sm border border-[var(--hairline)] px-3 py-2 text-sm font-medium text-[var(--ink)] transition-colors hover:border-[var(--brass)]"
-              >
-                <TrendingUp className="h-4 w-4 text-[var(--muted)]" />
-                Predictor financiero
-              </Link>
-              <Link
-                href="/licitaciones"
-                className="flex items-center gap-2.5 rounded-sm border border-[var(--hairline)] px-3 py-2 text-sm font-medium text-[var(--ink)] transition-colors hover:border-[var(--brass)]"
-              >
-                <Gavel className="h-4 w-4 text-[var(--muted)]" />
-                Ver licitaciones
-              </Link>
-            </div>
-          </EditorialCard>
-        </div>
+        <ChipRiesgoIA message="Sobrecosto en cimentación proyectado: el precio del acero fy=4200 supera el margen del presupuesto INF-024 en 6.2%. Revisa la partida 02.01." />
       </div>
 
       {/* Recent budgets */}
